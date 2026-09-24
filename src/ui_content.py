@@ -228,8 +228,16 @@ def account_bar_html(username: str) -> str:
     if not username:
         return ""
     return (
-        f'<div class="ih-account-bar">Connecté : <strong>{_e(username)}</strong>'
-        '<a href="/logout">Se déconnecter</a></div>'
+        '<div class="ih-account-bar"><div class="ih-account-pill">'
+        f'<span class="ih-account-mark" aria-hidden="true"></span><span class="ih-account-name">{_e(username)}</span>'
+        '<a class="ih-account-logout" href="/logout">Se déconnecter</a></div></div>'
+    )
+
+
+def engine_note_html() -> str:
+    return (
+        '<p class="ih-engine-note">Seuls les moteurs utilisables ici sont proposés. Pour utiliser Claude, '
+        "ChatGPT ou un autre modèle Gemini avec vos propres clés, passez par l'onglet « Paramètres ».</p>"
     )
 
 

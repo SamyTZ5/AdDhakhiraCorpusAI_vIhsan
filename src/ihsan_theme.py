@@ -689,13 +689,85 @@ def build_css() -> str:
 .ih-account-bar {{
   display: flex;
   justify-content: flex-end;
-  gap: 14px;
-  font-size: .9rem;
-  color: var(--ih-muted);
-  margin: 8px 2px 0;
+  margin: 10px 0 0;
 }}
-.ih-account-bar a {{
-  color: var(--ih-bordeaux);
+.ih-account-pill {{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 6px 5px 12px;
+  border: 1px solid var(--ih-line);
+  background: var(--ih-card);
+  font-size: .9rem;
+  color: var(--ih-ink);
+}}
+.ih-account-mark {{
+  width: 7px;
+  height: 7px;
+  background: var(--ih-gold);
+  transform: rotate(45deg);
+}}
+.ih-account-name {{
+  font-weight: 600;
+}}
+.ih-account-logout {{
+  padding: 3px 10px;
+  border-left: 1px solid var(--ih-line);
+  color: var(--ih-bordeaux) !important;
+  text-decoration: none !important;
+}}
+.ih-account-logout:hover, .ih-account-logout:focus-visible {{
+  background: #F3EBDD;
+}}
+/* Choix du moteur : cartes cliquables plutôt qu'un menu déroulant */
+#ih-engine {{
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 !important;
+}}
+/* Gradio entoure les champs d'un cadre « form » coloré : on l'efface ici. */
+.form:has(> #ih-engine) {{
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}}
+#ih-engine fieldset, #ih-engine .wrap, #ih-engine > div {{
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}}
+#ih-engine .wrap {{
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px !important;
+}}
+#ih-engine label {{
+  margin: 0 !important;
+  padding: 14px 16px !important;
+  border: 1px solid var(--ih-line) !important;
+  border-radius: 2px !important;
+  background: var(--ih-card) !important;
+  box-shadow: none !important;
+  color: var(--ih-ink) !important;
+  font-size: 1rem !important;
+  cursor: pointer;
+}}
+#ih-engine label:hover {{
+  border-color: var(--ih-gold) !important;
+}}
+#ih-engine label.selected, #ih-engine label:has(input:checked) {{
+  border-color: var(--ih-bordeaux) !important;
+  box-shadow: inset 3px 0 0 var(--ih-bordeaux) !important;
+  background: #FFFFFF !important;
+  font-weight: 600;
+}}
+#ih-engine input[type="radio"] {{
+  accent-color: var(--ih-bordeaux);
+}}
+.ih-engine-note {{
+  margin: 8px 2px 6px;
+  font-size: .88rem;
+  color: var(--ih-muted);
 }}
 .ih-settings-title {{
   font-family: var(--ih-display);
