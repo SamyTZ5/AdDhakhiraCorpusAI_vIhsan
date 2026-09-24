@@ -342,7 +342,7 @@ def print_final(
         pages_html = f"""
         <section class="tab-panel" id="panel-pages" role="tabpanel">
           <div class="card">
-            <h3>Pages Récupérées</h3>
+            <h3>Pages consultées</h3>
             <label class="select-label" for="page-select">Choisir une page</label>
             <select id="page-select">{options}</select>
             <div class="pages-wrap">
@@ -354,7 +354,7 @@ def print_final(
     else:
         pages_html = """
         <section class="tab-panel" id="panel-pages" role="tabpanel">
-          <div class="card"><h3>Pages Récupérées</h3><p>Aucune page récupérée.</p></div>
+          <div class="card"><h3>Pages consultées</h3><p>Aucune page récupérée.</p></div>
         </section>
         """
 
@@ -369,65 +369,66 @@ def print_final(
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Rapport Fiqh RAG</title>
+  <title>Synthèse bibliographique · Ad-Dhakhira</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cormorant+Garamond:wght@500;600&family=Source+Sans+3:wght@400;600&display=swap">
   <style>
     :root {{
-      --bg: #f5f7fb; --card: #ffffff; --text: #0f172a; --muted: #64748b;
-      --border: #e2e8f0; --accent: #0ea5e9; --accent-soft: #e0f2fe; --ok: #10b981;
+      color-scheme: light;
+      --bg: #F8F3EA; --card: #FFFCF6; --text: #2A1B17; --muted: #75655C;
+      --border: #E4D7C3; --accent: #6B1D2A; --accent-deep: #3F0F18;
+      --gold: #B8955A; --gold-soft: #E6D5B0; --accent-soft: #F4DFE2;
+      --display: "Cormorant Garamond", "Cormorant", Georgia, serif;
+      --arabic: "Amiri", "Noto Naskh Arabic", "Times New Roman", serif;
     }}
     * {{ box-sizing: border-box; }}
-    body {{ margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--bg); color: var(--text); }}
+    body {{ margin: 0; font-family: "Source Sans 3", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.55; }}
     .app {{ max-width: 980px; margin: 0 auto; padding: 16px; }}
-    .hero {{ background: linear-gradient(135deg, #082f49 0%, #0f766e 100%); color: #fff; border-radius: 16px; padding: 16px; margin-bottom: 14px; }}
-    .hero h1 {{ margin: 0 0 10px; font-size: 1.15rem; }}
-    .hero p {{ margin: 0; opacity: .95; line-height: 1.45; }}
-    .chips {{ display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }}
-    .chip {{ background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: 4px 10px; font-size: .8rem; }}
-    .tabs {{ display: flex; gap: 8px; margin-bottom: 10px; position: sticky; top: 0; padding: 8px 0; background: var(--bg); z-index: 20; }}
-    .tab-btn {{ border: 1px solid var(--border); background: #fff; color: var(--text); border-radius: 10px; padding: 8px 12px; font-weight: 600; font-size: .9rem; }}
-    .tab-btn.active {{ background: var(--accent-soft); border-color: var(--accent); color: #075985; }}
+    .hero {{ position: relative; background: var(--accent-deep); color: #FBF4E6; padding: 22px 24px; margin-bottom: 14px; }}
+    .hero::before {{ content: ""; position: absolute; inset: 6px; border: 1px solid rgba(184, 149, 90, .5); pointer-events: none; }}
+    .hero h1 {{ margin: 0 0 10px; font-family: var(--display); font-weight: 600; font-size: 1.55rem; line-height: 1.2; color: #FBF4E6; }}
+    .hero p {{ margin: 0; line-height: 1.5; color: rgba(251, 244, 230, .88); }}
+    .hero strong {{ color: var(--gold-soft); }}
+    .chips {{ display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }}
+    .chip {{ font-family: var(--arabic); font-size: .95rem; color: var(--gold-soft); border: 1px solid rgba(184, 149, 90, .6); padding: 2px 10px; }}
+    .tabs {{ display: flex; gap: 4px; margin-bottom: 12px; border-bottom: 1px solid var(--border); }}
+    .tab-btn {{ border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); padding: 10px 14px; font-family: var(--display); font-weight: 600; font-size: 1.1rem; cursor: pointer; margin-bottom: -1px; }}
+    .tab-btn:hover {{ color: var(--accent); }}
+    .tab-btn.active {{ color: var(--accent); border-bottom-color: var(--gold); }}
+    .tab-btn:focus-visible {{ outline: 2px solid var(--gold); outline-offset: 2px; }}
     .tab-panel {{ display: none; }}
     .tab-panel.active {{ display: block; }}
-    .card {{ background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-bottom: 12px; }}
-    h3 {{ margin: 0 0 10px; font-size: 1rem; }}
-    .notice {{ background: #fff7ed; color: #9a3412; border: 1px solid #fdba74; border-radius: 10px; padding: 10px; margin-bottom: 10px; font-size: .9rem; }}
-    .proof {{ border: 1px solid var(--border); border-radius: 12px; padding: 10px; margin-bottom: 10px; }}
-    .proof h4 {{ margin: 0 0 8px; font-size: .95rem; }}
-    blockquote {{ margin: 8px 0; padding: 10px; border-radius: 10px; background: #f8fafc; border-right: 3px solid var(--accent); line-height: 1.8; }}
-    .select-label {{ display: block; font-size: .82rem; color: var(--muted); margin-bottom: 6px; }}
-    select {{ width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 10px; font-size: .95rem; margin-bottom: 10px; background: #fff; }}
+    .card {{ background: var(--card); border: 1px solid var(--border); padding: 18px 20px; margin-bottom: 12px; }}
+    h3 {{ margin: 0 0 12px; font-family: var(--display); font-weight: 600; font-size: 1.4rem; color: var(--accent); }}
+    .notice {{ background: #FBF1E1; color: #7A4A12; border-left: 3px solid var(--gold); padding: 10px 12px; margin: 10px 0; font-size: .92rem; }}
+    .proof {{ border-top: 1px solid var(--border); padding: 14px 0 4px; }}
+    .proof:first-of-type {{ border-top: 0; padding-top: 0; }}
+    .proof h4 {{ margin: 0 0 8px; font-family: var(--display); font-weight: 600; font-size: 1.2rem; color: var(--text); }}
+    blockquote {{ margin: 10px 0; padding: 12px 16px; background: #FBF6EC; border-right: 3px solid var(--gold); font-family: var(--arabic); font-size: 1.2rem; line-height: 2; }}
+    .select-label {{ display: block; font-size: .85rem; color: var(--muted); margin-bottom: 6px; }}
+    select {{ width: 100%; border: 1px solid var(--border); padding: 10px; font-size: .95rem; margin-bottom: 12px; background: #FFFFFF; color: var(--text); font-family: inherit; }}
+    select:focus {{ outline: 2px solid var(--gold); outline-offset: 1px; }}
     .page-card {{ display: none; }}
     .page-card.active {{ display: block; }}
-    .meta-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }}
-    .meta-grid span {{ display: block; font-size: .75rem; color: var(--muted); }}
-    .meta-grid strong {{ font-size: .85rem; display: block; line-height: 1.3; }}
-    details {{ border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }}
-    summary {{ cursor: pointer; padding: 8px 10px; background: #f8fafc; font-weight: 600; font-size: .9rem; }}
-    pre {{ margin: 0; padding: 10px; white-space: pre-wrap; word-wrap: break-word; line-height: 1.75; font-size: .92rem; }}
+    .meta-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; margin-bottom: 12px; }}
+    .meta-grid span {{ display: block; font-size: .78rem; color: var(--muted); }}
+    .meta-grid strong {{ font-size: .9rem; display: block; line-height: 1.35; font-weight: 600; }}
+    details {{ border: 1px solid var(--border); overflow: hidden; }}
+    summary {{ cursor: pointer; padding: 9px 12px; background: #FBF6EC; font-weight: 600; font-size: .92rem; color: var(--accent); }}
+    pre {{ margin: 0; padding: 12px 14px; white-space: pre-wrap; word-wrap: break-word; line-height: 2; font-size: 1.1rem; font-family: var(--arabic); }}
     .table-wrap {{ overflow-x: auto; }}
     .diag-table {{ width: 100%; border-collapse: collapse; }}
     .diag-table th, .diag-table td {{ border: 1px solid var(--border); padding: 8px; text-align: left; font-size: .88rem; vertical-align: top; }}
-    .diag-table th {{ width: 42%; background: #f8fafc; }}
-    .issues-block h4 {{ margin: 12px 0 6px; font-size: .9rem; }}
+    .diag-table th {{ width: 42%; background: #FBF6EC; }}
+    .issues-block h4 {{ margin: 12px 0 6px; font-size: .95rem; }}
     .issues-block ul {{ margin: 0; padding-left: 18px; }}
     .llm-debug-block {{ margin-top: 18px; }}
-    .llm-debug-event {{ margin-top: 12px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; }}
+    .llm-debug-event {{ margin-top: 12px; padding: 10px; border: 1px solid var(--border); }}
     .llm-debug-event h4, .llm-debug-event h5 {{ margin: 0 0 8px; }}
     .llm-debug-event p {{ margin: 6px 0; }}
-    @media (prefers-color-scheme: dark) {{
-      :root {{
-        color-scheme: dark;
-        --bg: #0f172a; --card: #172033; --text: #e2e8f0; --muted: #94a3b8;
-        --border: #334155; --accent: #38bdf8; --accent-soft: #0c4a6e; --ok: #34d399;
-      }}
-      .tab-btn, select {{ background: #172033; color: var(--text); }}
-      .tab-btn.active {{ color: #e0f2fe; }}
-      .notice {{ background: #431407; color: #fed7aa; border-color: #9a3412; }}
-      blockquote, summary, .diag-table th {{ background: #1e293b; }}
-    }}
+    .llm-debug-event pre {{ font-family: ui-monospace, monospace; font-size: .85rem; line-height: 1.5; }}
     @media (max-width: 640px) {{
       .app {{ padding: 10px; }}
-      .hero {{ border-radius: 12px; }}
+      .card {{ padding: 14px; }}
       .meta-grid {{ grid-template-columns: 1fr; }}
       .tabs {{ overflow-x: auto; }}
       .tab-btn {{ white-space: nowrap; }}
@@ -437,29 +438,29 @@ def print_final(
 <body>
   <main class="app">
     <header class="hero">
-      <h1>Assistant IA de recherche bibliographique en Fiqh Malikite par RAG et LLM</h1>
+      <h1>Synthèse bibliographique en fiqh mālikite</h1>
       <p><strong>Question:</strong> {_h(question)}</p>
       <div class="chips">{keyword_html}</div>
     </header>
 
     <nav class="tabs" role="tablist" aria-label="Sections rapport">
       <button class="tab-btn active" data-tab="answer">Réponse</button>
-      <button class="tab-btn" data-tab="pages">Pages</button>
+      <button class="tab-btn" data-tab="pages">Pages consultées</button>
       {debug_tab}
     </nav>
 
     <section class="tab-panel active" id="panel-answer" role="tabpanel">
       <div class="card">
-        <h3>Avis Synthétique</h3>
+        <h3>Avis synthétique</h3>
         <p>{_h(reponse_courte or "Aucune conclusion n'a pu être formulée.")}</p>
         {certitude_html}
       </div>
       <div class="card">
-        <h3>Preuves Textuelles</h3>
+        <h3>Preuves textuelles</h3>
         {points_html}
       </div>
       <div class="card">
-        <h3>Limites de la Réponse</h3>
+        <h3>Limites de la réponse</h3>
         <p>{_h(limites or "Aucune limite supplémentaire signalée.")}</p>
       </div>
     </section>
@@ -520,7 +521,7 @@ def write_output_with_timing(content: str, elapsed_seconds: float, output_path: 
 
     if "<!doctype html>" in content and "</header>" in content:
         timing_badge = (
-            f"<p style=\"margin:10px 0 0;font-size:.86rem;opacity:.92;\">"
+            f"<p style=\"margin:10px 0 0;font-size:.86rem;color:rgba(251,244,230,.75);\">"
             f"<strong>Temps de traitement:</strong> {_h(format_duration(elapsed_seconds))}"
             f"</p>"
         )

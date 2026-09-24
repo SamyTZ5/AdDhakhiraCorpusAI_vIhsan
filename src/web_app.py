@@ -13,6 +13,7 @@ from typing import Dict, List
 
 from src import config as base_config
 from src.reporting import write_output_with_timing
+from src import ihsan_theme as ihsan
 
 
 BACKEND_CHOICES = [
@@ -549,10 +550,16 @@ def build_demo():
 }
 """
 
-    with gr.Blocks(title="AdDhakhiraCorpusAI") as demo:
-        gr.Markdown("## Assistant de recherche Malikite")
-        gr.Markdown(
-            """
+    def run_styled(*args):
+        for status_message, report, download_update in _run_question(*args):
+            yield status_message, ihsan.report_iframe(report), download_update
+
+    with gr.Blocks(title="Ad-Dhakhira · Institut Ihsan") as demo:
+        gr.HTML(ihsan.header_html())
+        gr.HTML(ihsan.section_html("I", "Le moteur", "Choisissez le modèle qui rédige la synthèse."))
+        with gr.Accordion("Aide sur les moteurs et la recherche", open=False):
+            gr.Markdown(
+                """
 ### Options d'inférence
 
 Vous pouvez écrire votre question indifféremment en arabe ou en français.
@@ -568,34 +575,45 @@ Vous pouvez écrire votre question indifféremment en arabe ou en français.
 
 Code source et explications détaillées : [AdDhakhiraCorpusAI](https://github.com/git-haddadz/AdDhakhiraCorpusAI). Projet expérimental de recherche assistée par IA ; consultez le dépôt pour les prérequis, les limites et les options de configuration.
 """
-        )
+            )
         with gr.Row():
             backend = gr.Dropdown(
                 choices=BACKEND_CHOICES,
                 value=initial_backend,
-                label="Backend",
+                label="Moteur de réponse",
             )
             dense_retrieval = gr.Checkbox(
-                label="Retrieval dense",
+                label="Recherche par le sens (recommandé)",
                 value=bool(_config_value("ENABLE_DENSE_RETRIEVAL", True)),
             )
 
         api_key = gr.Textbox(
             label="Clé API",
+            type="password",
             value=_config_api_key_for_backend(initial_backend) if initial_backend != "default" else "",
             visible=(initial_backend != "default"),
         )
 
-        question = gr.Textbox(label="Question", lines=4)
-        submit = gr.Button("Envoyer", variant="primary")
-        status = gr.Markdown(elem_id="run-status")
-        answer = gr.HTML()
-        download = gr.DownloadButton(
-            label="Télécharger la synthèse bibliographique",
-            value=None,
-            variant="primary",
-            visible="hidden",
+        gr.HTML(ihsan.section_html("II", "Votre question", "En arabe ou en français."))
+        question = gr.Textbox(
+            label="Question",
+            show_label=False,
+            lines=4,
+            placeholder="Par exemple : quelles sont les conditions de validité de la prière ?",
+            elem_id="ih-question",
         )
+        submit = gr.Button("Rechercher dans les sources", variant="primary", elem_id="ih-submit")
+        status = gr.Markdown(elem_id="run-status")
+        gr.HTML(ihsan.section_html("III", "La synthèse", "Citations, explications et pages consultées."))
+        answer = gr.HTML(ihsan.empty_answer_html(), elem_id="ih-answer")
+        download = gr.DownloadButton(
+            label="Télécharger la synthèse",
+            value=None,
+            variant="secondary",
+            visible="hidden",
+            elem_id="ih-download",
+        )
+        gr.HTML(ihsan.footer_html())
 
         backend.change(
             _toggle_backend_fields,
@@ -605,7 +623,7 @@ Code source et explications détaillées : [AdDhakhiraCorpusAI](https://github.c
             show_progress="hidden",
         )
         submit.click(
-            _run_question,
+            run_styled,
             inputs=[
                 backend,
                 api_key,
@@ -638,6 +656,7 @@ def main() -> None:
         share=args.share,
         debug=args.debug,
         allowed_paths=_allowed_paths(),
+        **ihsan.launch_kwargs(),
     )
 
 
