@@ -106,6 +106,10 @@ def _model_kwargs_for_this_gpu(single_device: bool = True) -> dict:
                 kwargs["device_map"] = "cuda"
             if torch.cuda.get_device_capability()[0] < 8:
                 kwargs["dtype"] = torch.float16
+        else:
+            # Sans GPU (Hugging Face Spaces gratuit), float32 est le format le
+            # plus rapide et le plus sûr sur un processeur ordinaire.
+            kwargs["dtype"] = torch.float32
     except Exception:
         pass
     return kwargs

@@ -17,12 +17,17 @@ from src import ihsan_theme as ihsan
 from src import ui_content as ui
 
 
-BACKEND_CHOICES = [
-    ("Default", "default"),
-    ("Gemini API", "gemini_api"),
-    ("ChatGPT / OpenAI API", "openai_api"),
-    ("Claude / Anthropic API", "anthropic_api"),
+ALL_BACKEND_CHOICES = [
+    ("Modèles locaux (vLLM)", "default"),
+    ("Gemini", "gemini_api"),
+    ("ChatGPT / OpenAI", "openai_api"),
+    ("Claude / Anthropic", "anthropic_api"),
 ]
+
+# Sur un hébergement sans GPU (Hugging Face Spaces), seuls les moteurs en ligne
+# fonctionnent : ADDHAKHIRA_BACKENDS="gemini_api" limite la liste proposée.
+_enabled = [b.strip() for b in os.environ.get("ADDHAKHIRA_BACKENDS", "").split(",") if b.strip()]
+BACKEND_CHOICES = [c for c in ALL_BACKEND_CHOICES if not _enabled or c[1] in _enabled] or ALL_BACKEND_CHOICES
 
 API_KEY_BY_BACKEND = {
     "gemini_api": "GEMINI_API_KEY",
@@ -40,9 +45,9 @@ BACKEND_DISPLAY_NAMES = {
 # gemini-3.5-flash-lite : bien plus de requêtes par jour sur l'offre gratuite
 # que gemini-3.5-flash, ce qui compte car une question déclenche plusieurs appels.
 DEFAULT_API_MODELS = {
-    "gemini_api": "gemini-3.5-flash-lite",
-    "openai_api": "gpt-4.1",
-    "anthropic_api": "claude-sonnet-5",
+    "gemini_api": os.environ.get("GEMINI_MODEL") or "gemini-3.5-flash-lite",
+    "openai_api": os.environ.get("OPENAI_MODEL") or "gpt-4.1",
+    "anthropic_api": os.environ.get("ANTHROPIC_MODEL") or "claude-sonnet-5",
 }
 
 # src.embeddings n'est volontairement pas rechargé : il garde le modèle
@@ -492,11 +497,23 @@ def _run_question(
     )
 
 
+def _has_server_key(backend: str) -> bool:
+    key_name = API_KEY_BY_BACKEND.get(backend)
+    if not key_name:
+        return False
+    return bool(_config_api_key_for_backend(backend) or os.environ.get(key_name, "").strip())
+
+
+def _needs_user_key(backend: str) -> bool:
+    return backend != "default" and not _has_server_key(backend)
+
+
 def _toggle_backend_fields(backend: str):
     import gradio as gr
 
-    is_api = backend != "default"
-    return gr.update(visible=is_api, value=_config_api_key_for_backend(backend) if is_api else "")
+    # La clé du serveur n'est jamais renvoyée au navigateur : si elle existe, le
+    # champ est masqué et le serveur l'utilise directement.
+    return gr.update(visible=_needs_user_key(backend), value="")
 
 
 def build_demo():
@@ -504,7 +521,7 @@ def build_demo():
 
     initial_backend = str(_config_value("LLM_BACKEND", "default"))
     if initial_backend not in {value for _, value in BACKEND_CHOICES}:
-        initial_backend = "default"
+        initial_backend = BACKEND_CHOICES[0][1]
 
     notify_js = """
 (backend, apiKey, denseRetrieval, question) => {
@@ -596,8 +613,9 @@ def build_demo():
                 api_key = gr.Textbox(
                     label="Clé API",
                     type="password",
-                    value=_config_api_key_for_backend(initial_backend) if initial_backend != "default" else "",
-                    visible=(initial_backend != "default"),
+                    value="",
+                    placeholder="Collez votre clé API",
+                    visible=_needs_user_key(initial_backend),
                 )
 
                 gr.HTML(ihsan.section_html("II", "Votre question", "En arabe ou en français."))

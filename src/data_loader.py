@@ -35,10 +35,33 @@ def _resolve_json_files(json_input_path: str) -> List[str]:
     raise FileNotFoundError(f"JSON path not found: {json_input_path}")
 
 
+# Le corpus est long à préparer (normalisation de l'arabe, découpage) : environ
+# 35 s sur un petit processeur. On le garde en mémoire tant que les fichiers
+# du dossier ne changent pas.
+_CORPUS_CACHE: Dict[tuple, Tuple[List[TextChunk], Dict[str, PageDoc]]] = {}
+
+
+def _corpus_cache_key(json_files: List[str]) -> tuple:
+    return tuple(
+        (os.path.abspath(p), os.path.getsize(p), int(os.path.getmtime(p))) for p in json_files
+    )
+
+
 def load_chunks(json_input_path: str) -> Tuple[List[TextChunk], Dict[str, PageDoc]]:
     json_files = _resolve_json_files(json_input_path)
     if not json_files:
         raise ValueError(f"No JSON files found in: {json_input_path}")
+    cache_key = _corpus_cache_key(json_files)
+    cached = _CORPUS_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+    result = _load_chunks_uncached(json_files)
+    _CORPUS_CACHE.clear()
+    _CORPUS_CACHE[cache_key] = result
+    return result
+
+
+def _load_chunks_uncached(json_files: List[str]) -> Tuple[List[TextChunk], Dict[str, PageDoc]]:
 
     chunks: List[TextChunk] = []
     pages: Dict[str, PageDoc] = {}
