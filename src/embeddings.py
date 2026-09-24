@@ -88,21 +88,27 @@ def get_embedding_adapter(model_name: str) -> EmbeddingAdapter:
     return EmbeddingAdapter(model_name=model_name)
 
 
-def _model_kwargs_for_this_gpu() -> dict:
-    """Choisit une précision adaptée au GPU.
+def _model_kwargs_for_this_gpu(single_device: bool = True) -> dict:
+    """Réglages de chargement adaptés au GPU.
 
-    Qwen3-Embedding-4B est publié en bfloat16, que les GPU antérieurs à Ampere
-    (dont le T4 de Colab gratuit) ne gèrent pas nativement : on passe alors en
-    float16, qui tient aussi dans les 15 Go du T4.
+    - Les poids sont chargés directement sur le GPU (device_map), sans passer
+      d'abord par la RAM : sur Colab gratuit (environ 12 Go de RAM), charger
+      les 8 Go du modèle en RAM en plus du corpus faisait planter la session.
+    - Qwen3-Embedding-4B est publié en bfloat16, que les GPU antérieurs à
+      Ampere (dont le T4) ne gèrent pas nativement : on passe alors en float16.
     """
+    kwargs = {}
     try:
         import torch
 
-        if torch.cuda.is_available() and torch.cuda.get_device_capability()[0] < 8:
-            return {"dtype": torch.float16}
+        if torch.cuda.is_available():
+            if single_device:
+                kwargs["device_map"] = "cuda"
+            if torch.cuda.get_device_capability()[0] < 8:
+                kwargs["dtype"] = torch.float16
     except Exception:
         pass
-    return {}
+    return kwargs
 
 
 def normalize_vectors(vectors: np.ndarray) -> np.ndarray:
@@ -135,7 +141,7 @@ class EmbeddingModel:
             cache_folder=cache_folder,
             trust_remote_code=True,
             device=device,
-            model_kwargs=_model_kwargs_for_this_gpu(),
+            model_kwargs=_model_kwargs_for_this_gpu(single_device=len(self.devices) <= 1),
         )
 
     def encode_chunks(self, texts: Iterable[str], batch_size: int = 32) -> np.ndarray:

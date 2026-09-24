@@ -108,11 +108,16 @@ def build_signature(model_name: str, backend: str, chunks: List[TextChunk]) -> D
 
 
 class VectorIndex:
-    def __init__(self, backend: str, signature: Dict, metadata: List[Dict], index):
+    def __init__(self, backend: str, signature: Dict, metadata: Optional[List[Dict]], index):
         self.backend = backend
         self.signature = signature
+        # metadata vaut None en recherche : l'identifiant FAISS est déjà l'indice du
+        # passage dans le corpus (garanti par chunks_sha256), inutile de charger
+        # les ~250 Mo de metadata.json en mémoire.
         self.metadata = metadata
-        self.metadata_by_chunk_index = {int(m["chunk_index"]): m for m in metadata}
+        self.metadata_by_chunk_index = (
+            {int(m["chunk_index"]): m for m in metadata} if metadata is not None else None
+        )
         self.index = index
 
     @classmethod
@@ -140,10 +145,14 @@ class VectorIndex:
         raise ValueError(f"Unsupported vector backend: {backend}")
 
     @classmethod
-    def load(cls, directory: Path) -> "VectorIndex":
+    def load(cls, directory: Path, with_metadata: bool = True) -> "VectorIndex":
         directory = Path(directory)
         signature = json.loads((directory / "signature.json").read_text(encoding="utf-8"))
-        metadata = json.loads((directory / "metadata.json").read_text(encoding="utf-8"))
+        metadata = (
+            json.loads((directory / "metadata.json").read_text(encoding="utf-8"))
+            if with_metadata
+            else None
+        )
         backend = signature["backend"]
         if backend == "faiss":
             import faiss
@@ -208,10 +217,15 @@ class VectorIndex:
             idx = int(idx)
             if idx < 0:
                 continue
-            source = self.metadata_by_chunk_index.get(idx)
-            if source is None:
-                continue
-            rec = dict(source)
+            if self.metadata_by_chunk_index is None:
+                if idx >= int(self.signature.get("chunk_count", 0)):
+                    continue
+                rec = {"chunk_index": idx}
+            else:
+                source = self.metadata_by_chunk_index.get(idx)
+                if source is None:
+                    continue
+                rec = dict(source)
             rec["dense_score"] = float(score)
             rec["vector_backend"] = self.backend
             results.append(rec)
@@ -278,7 +292,7 @@ def load_compatible_index(
         raise FileNotFoundError(
             f"Vector index not found: {directory}. Build it before enabling dense retrieval."
         )
-    index = VectorIndex.load(directory)
+    index = VectorIndex.load(directory, with_metadata=False)
     index.assert_compatible(build_signature(model_name, backend, chunks))
     return index
 

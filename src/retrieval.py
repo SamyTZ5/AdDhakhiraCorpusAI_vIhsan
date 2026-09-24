@@ -34,8 +34,7 @@ class HybridRetriever:
     ):
         self.chunks = chunks
         self.keep_embedder_loaded = bool(keep_embedder_loaded)
-        self.bm25_corpus = [tokenize_for_bm25(c.normalized_lexical_text) for c in chunks]
-        self.bm25 = BM25Okapi(self.bm25_corpus) if self.bm25_corpus else None
+        self.bm25 = None
         self.embedding_model_name = embedding_model_name
         self.enable_dense = bool(enable_dense and embedding_model_name)
         self.enable_hybrid = bool(enable_hybrid)
@@ -48,6 +47,11 @@ class HybridRetriever:
         self.vector_index = None
         self.dense_enabled = False
         self._load_dense_if_enabled()
+        # En recherche dense seule (réglage par défaut), le classement ne dépend pas
+        # de BM25 : on évite de construire cet index, qui coûte ~1,5 Go de RAM.
+        if chunks and (not self.dense_enabled or self.enable_hybrid):
+            bm25_corpus = [tokenize_for_bm25(c.normalized_lexical_text) for c in chunks]
+            self.bm25 = BM25Okapi(bm25_corpus)
 
     def _load_dense_if_enabled(self):
         if not self.enable_dense:
