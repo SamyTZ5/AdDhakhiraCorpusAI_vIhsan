@@ -19,6 +19,9 @@ LOGGER = logging.getLogger(__name__)
 
 # Marge ajoutée à max_output_tokens pour la réflexion interne des modèles Gemini.
 GEMINI_THINKING_HEADROOM_TOKENS = 8192
+# Délai maximum d'un appel Gemini, et modèles de repli en cas de surcharge.
+GEMINI_TIMEOUT_MS = 120_000
+GEMINI_FALLBACK_MODELS = ["gemini-3.1-flash-lite", "gemini-3.5-flash"]
 
 
 class JSONGenerationError(RuntimeError):
@@ -102,18 +105,44 @@ def _retry_delay_seconds(exc: BaseException, attempt: int) -> float:
 PROVIDER_MAX_ATTEMPTS = 5
 
 
-def call_provider(provider: str, request):
+def _check_cancelled() -> None:
+    """Arrête la recherche si la page qui l'a lancée a été fermée."""
+    try:
+        from src import job_queue
+    except Exception:
+        return
+    try:
+        job_queue.check_cancelled()
+    except job_queue.SearchCancelled as exc:
+        raise ProviderFatalError(str(exc)) from exc
+
+
+def _set_note(note: str) -> None:
+    try:
+        from src import job_queue
+
+        job_queue.set_note(note)
+    except Exception:
+        pass
+
+
+def call_provider(provider: str, request, on_transient=None):
     """Appelle l'API d'un fournisseur en réessayant les erreurs passagères.
 
     Limites par minute, surcharge et coupures réseau sont réessayées avec une
-    attente croissante. Clé refusée, quota journalier épuisé ou modèle inconnu
-    lèvent directement une ProviderFatalError avec un message clair.
+    attente croissante, affichée dans la jauge. Clé refusée, quota journalier
+    épuisé ou modèle inconnu lèvent directement une ProviderFatalError avec un
+    message clair. on_transient(attempt, exc) permet au fournisseur de réagir
+    à une surcharge (par exemple changer de modèle) et renvoie un texte à afficher.
     """
     import time
 
     for attempt in range(PROVIDER_MAX_ATTEMPTS):
+        _check_cancelled()
         try:
-            return request()
+            result = request()
+            _set_note("")
+            return result
         except ProviderFatalError:
             raise
         except Exception as exc:
@@ -128,28 +157,32 @@ def call_provider(provider: str, request):
                 ) from exc
             if kind == "not_found":
                 raise ProviderFatalError(
-                    f"Modèle {provider} introuvable. Vérifiez le nom exact du modèle dans le champ prévu."
+                    f"Modèle {provider} introuvable. Vérifiez le nom exact du modèle dans l'onglet Paramètres."
                 ) from exc
             if kind == "daily_quota":
                 raise ProviderFatalError(
                     f"Quota journalier {provider} atteint pour ce modèle. Réessayez demain, "
-                    "ou choisissez un modèle avec plus de requêtes gratuites (par exemple un modèle « flash-lite »)."
+                    "ou choisissez un autre modèle dans l'onglet Paramètres."
                 ) from exc
             if kind == "transient" and attempt < PROVIDER_MAX_ATTEMPTS - 1:
                 delay = _retry_delay_seconds(exc, attempt)
-                LOGGER.warning(
-                    "%s temporairement indisponible ou limité (tentative %s/%s), nouvel essai dans %.0f s : %s",
-                    provider,
-                    attempt + 1,
-                    PROVIDER_MAX_ATTEMPTS,
-                    delay,
-                    exc,
-                )
-                time.sleep(delay)
+                switched = on_transient(attempt, exc) if on_transient else ""
+                note = switched or f"{provider} est surchargé ou limite les requêtes : nouvel essai dans {delay:.0f} s."
+                LOGGER.warning("%s (tentative %s/%s) : %s", note, attempt + 1, PROVIDER_MAX_ATTEMPTS, exc)
+                _set_note(note)
+                if switched:
+                    continue  # nouveau modèle : on réessaie tout de suite
+                # Attente découpée pour pouvoir s'arrêter si la page est fermée.
+                end = time.time() + delay
+                while time.time() < end:
+                    _check_cancelled()
+                    time.sleep(min(2.0, max(0.0, end - time.time())))
                 continue
+            _set_note("")
             if kind == "transient":
                 raise ProviderFatalError(
-                    f"{provider} limite le nombre de requêtes ou est surchargé. Attendez une minute puis relancez la question."
+                    f"{provider} est surchargé en ce moment. Réessayez dans quelques minutes, "
+                    "ou choisissez un autre moteur ou un autre modèle dans l'onglet Paramètres."
                 ) from exc
             raise
 
@@ -420,7 +453,10 @@ class GeminiBackend(LLMBackend):
         if not key:
             raise ValueError("GEMINI_API_KEY is required when LLM_BACKEND='gemini_api'.")
         self.model_name = model_name
-        self.client = genai.Client(api_key=key)
+        # Délai maximum par appel (en millisecondes) : un appel ne peut plus rester
+        # bloqué indéfiniment et empêcher les recherches suivantes.
+        self.client = genai.Client(api_key=key, http_options={"timeout": GEMINI_TIMEOUT_MS})
+        self._fallbacks = [m for m in GEMINI_FALLBACK_MODELS if m != model_name]
 
     @staticmethod
     def _extract_json(raw: str) -> Dict:
@@ -482,7 +518,16 @@ class GeminiBackend(LLMBackend):
                 raise RuntimeError("Gemini SDK returned an empty text response.")
             return text.strip()
 
-        return call_provider("Gemini", request)
+        def on_transient(attempt, exc):
+            # Après deux échecs dus à la surcharge, on bascule sur un autre modèle Gemini.
+            message = str(exc).lower()
+            overloaded = "503" in message or "unavailable" in message or "high demand" in message
+            if overloaded and attempt >= 1 and self._fallbacks:
+                previous, self.model_name = self.model_name, self._fallbacks.pop(0)
+                return f"{previous} est saturé chez Google : bascule automatique sur {self.model_name}."
+            return ""
+
+        return call_provider("Gemini", request, on_transient)
 
     def generate_json(
         self,
