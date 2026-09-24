@@ -80,6 +80,40 @@ def _fmt_duration(seconds: float) -> str:
     return f"{minutes} min {secs:02d} s" if minutes else f"{secs} s"
 
 
+def format_duration(seconds: float) -> str:
+    return _fmt_duration(seconds)
+
+
+def queue_indicator_html(status: Optional[Dict] = None) -> str:
+    """Activité en direct, visible par tous sous le bouton de recherche."""
+    if status is None:
+        from src import job_queue
+
+        status = job_queue.status()
+    online = [u for u in (status.get("online") or []) if u and u != "anonyme"]
+    online_html = (
+        f'<span class="ih-queue-online">En ligne : {_e(", ".join(online))}</span>' if online else ""
+    )
+    if not status.get("running") and not status.get("waiting"):
+        return (
+            '<div class="ih-queue ih-queue-free"><span class="ih-queue-dot"></span>'
+            f"<span>Outil disponible</span>{online_html}</div>"
+        )
+    parts = []
+    if status.get("running"):
+        since = status.get("running_since") or time.time()
+        who = status.get("running_user") or "quelqu'un"
+        who = "quelqu'un" if who == "anonyme" else who
+        parts.append(f"<strong>{_e(who)}</strong> fait une recherche depuis {_fmt_duration(time.time() - since)}")
+    waiting = [u if u != "anonyme" else "quelqu'un" for u in (status.get("waiting_users") or [])]
+    if waiting:
+        parts.append(f"en attente : {_e(', '.join(waiting))}")
+    return (
+        '<div class="ih-queue ih-queue-busy"><span class="ih-queue-dot"></span>'
+        f"<span>{' · '.join(parts)}</span>{online_html}</div>"
+    )
+
+
 def progress_percent(stage: str, seconds_in_stage: float) -> float:
     """Avance vers le palier suivant sans jamais l'atteindre avant le vrai passage."""
     _, start, target, typical = _STAGE_PLAN.get(stage, _STAGE_PLAN["startup"])
@@ -153,6 +187,8 @@ def progress_html(
         "done": f"100 % · {_fmt_duration(elapsed)}",
         "error": "La recherche s'est arrêtée",
     }.get(state, f"{int(round(to_percent))} % · {_fmt_duration(elapsed)}")
+    if state == "running" and stage == "queued":
+        label = f"En file d'attente · {_fmt_duration(elapsed)}"
 
     return f"""
 <div class="ih-progress ih-progress-{state}" role="progressbar" aria-valuemin="0" aria-valuemax="100"

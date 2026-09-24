@@ -16,6 +16,7 @@ from src import config as base_config
 from src.reporting import write_output_with_timing
 from src import ihsan_theme as ihsan
 from src import engines
+from src import job_queue
 from src import runtime_status
 from src import ui_content as ui
 
@@ -29,7 +30,6 @@ PIPELINE_MODULE_PREFIXES = (
     "src.reporting",
 )
 
-_pipeline_lock = threading.Lock()
 
 
 def _source_pairs(pages: List[Dict[str, object]]) -> List[Dict[str, str]]:
@@ -276,6 +276,7 @@ def _run_question(
     dense_retrieval: bool,
     question: str,
     user_settings=None,
+    username: str = "",
 ):
     import gradio as gr
 
@@ -328,50 +329,54 @@ def _run_question(
         events.put(event)
 
     def run_pipeline() -> None:
-        # The pipeline imports config values as module constants. Keep one run at a
-        # time so requests cannot overwrite each other's runtime backend/key.
-        with _pipeline_lock:
+        # La file d'attente garantit qu'une seule recherche tourne à la fois : le
+        # pipeline ajuste des réglages globaux (moteur, clé) qui ne doivent pas se mélanger.
+        try:
             progress_callback(
                 {
                     "stage": "started",
                     "message": "Votre question démarre maintenant. L'assistant commence son analyse.",
                 }
             )
-            try:
-                _apply_runtime_config(cfg)
-                _clear_pipeline_modules()
-                pipeline = importlib.import_module("src.pipeline")
+            _apply_runtime_config(cfg)
+            _clear_pipeline_modules()
+            pipeline = importlib.import_module("src.pipeline")
 
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                output_path = _output_dir() / f"answer_{timestamp}.html"
-                t0 = time.time()
-                report = pipeline.build_final_report(
-                    question=question,
-                    translate_to_french=bool(_config_value("TRANSLATE_TOP_CHUNKS_TO_FRENCH", False)),
-                    diagnostic_coherence=True,
-                    auto_translate_question_to_arabic=bool(
-                        _config_value("AUTO_TRANSLATE_QUESTION_TO_ARABIC", False)
-                    ),
-                    progress_callback=progress_callback,
-                )
-                elapsed = time.time() - t0
-                write_output_with_timing(
-                    report,
-                    elapsed_seconds=elapsed,
-                    output_path=str(output_path),
-                )
-                backend_display_name = engines.display_name(backend)
-                result["status"] = (
-                    f"Terminé en {elapsed:.1f}s avec {backend_display_name}. "
-                    "Synthèse prête au téléchargement."
-                )
-                result["report"] = report
-                result["output_path"] = str(output_path)
-            except Exception as exc:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_path = _output_dir() / f"answer_{timestamp}.html"
+            t0 = time.time()
+            report = pipeline.build_final_report(
+                question=question,
+                translate_to_french=bool(_config_value("TRANSLATE_TOP_CHUNKS_TO_FRENCH", False)),
+                diagnostic_coherence=True,
+                auto_translate_question_to_arabic=bool(
+                    _config_value("AUTO_TRANSLATE_QUESTION_TO_ARABIC", False)
+                ),
+                progress_callback=progress_callback,
+            )
+            elapsed = time.time() - t0
+            write_output_with_timing(
+                report,
+                elapsed_seconds=elapsed,
+                output_path=str(output_path),
+            )
+            backend_display_name = engines.display_name(backend)
+            result["status"] = (
+                f"Terminé en {elapsed:.1f}s avec {backend_display_name}. "
+                "Synthèse prête au téléchargement."
+            )
+            result["report"] = report
+            result["output_path"] = str(output_path)
+        except Exception as exc:
+            if "Recherche arrêtée" in str(exc):
+                print(f"[Ad-Dhakhira] {exc}", flush=True)  # arrêt voulu, pas une panne
+            else:
                 traceback.print_exc()
-                result["status"] = f"Erreur: {exc}"
-                result["report"] = ""
-                result["output_path"] = None
+            result["status"] = f"Erreur : {exc}"
+            result["report"] = ""
+            result["output_path"] = None
+        finally:
+            job_queue.finish(ticket)
 
     sources: List[Dict[str, str]] = []
     filler_index = 0
@@ -382,41 +387,73 @@ def _run_question(
         thread.start()
         return thread
 
-    if _pipeline_lock.locked():
-        current_stage = "queued"
-        yield (
-            "Votre question est actuellement en queue. Veuillez laisser cette page ouverte ; une notification pourra vous prévenir quand l'assistant commencera à la traiter.",
-            "",
-            gr.update(value=None, visible="hidden"),
-            {"stage": current_stage, "sources": sources},
-        )
-        while _pipeline_lock.locked():
-            time.sleep(8)
-            filler_index += 1
+    # File d'attente : premier arrivé, premier servi, avec la position affichée.
+    ticket = job_queue.enter(username)
+    started = False
+    try:
+        while not job_queue.try_start(ticket):
+            ahead = job_queue.position(ticket)
+            state = job_queue.status()
+            since = state.get("running_since")
+            who = state.get("running_user") or "quelqu'un"
+            running = f"{who} fait une recherche" + (
+                f" depuis {ui.format_duration(time.time() - since)}" if since else ""
+            )
+            if ahead <= 1:
+                message = (
+                    f"{running}. Vous êtes le prochain : votre question démarrera automatiquement "
+                    "dès qu'elle sera terminée. Gardez cette page ouverte."
+                )
+            else:
+                message = (
+                    f"{running}. File d'attente : {ahead} recherches avant la vôtre. "
+                    "Votre question démarrera automatiquement. Gardez cette page ouverte."
+                )
             yield (
-                _idle_status_message(current_stage, sources, filler_index),
+                message,
                 "",
                 gr.update(value=None, visible="hidden"),
-                {"stage": current_stage, "sources": sources},
+                {"stage": "queued", "sources": [], "queue_position": ahead},
             )
-        worker = start_worker()
-    else:
+            time.sleep(2)
+        started = True
         current_stage = "startup"
         worker = start_worker()
-        yield (
-            "Bienvenue. L'assistant démarre, prépare l'environnement puis charge les modèles. Merci de patienter...",
-            "",
-            gr.update(value=None, visible="hidden"),
-            {"stage": current_stage, "sources": sources},
-        )
+    finally:
+        if not started:
+            job_queue.leave(ticket)
+        elif worker is None:
+            job_queue.finish(ticket)
+    yield (
+        "Bienvenue. L'assistant démarre, prépare l'environnement puis charge les modèles. Merci de patienter...",
+        "",
+        gr.update(value=None, visible="hidden"),
+        {"stage": current_stage, "sources": sources},
+    )
+
+    finished = False
+    try:
+        yield from _follow_worker(worker, events, result, ticket, current_stage, sources, filler_index)
+        finished = True
+    finally:
+        if not finished:
+            # La page a été fermée ou rechargée : la recherche s'arrêtera au
+            # prochain appel au modèle, pour ne pas bloquer les suivants.
+            job_queue.cancel(ticket)
+
+
+def _follow_worker(worker, events, result, ticket, current_stage, sources, filler_index):
+    import gradio as gr
 
     while worker.is_alive() or not events.empty():
+        job_queue.touch(ticket)
         try:
-            event = events.get(timeout=8)
+            event = events.get(timeout=4)
         except queue.Empty:
             filler_index += 1
+            note = job_queue.note(ticket)
             yield (
-                _idle_status_message(current_stage, sources, filler_index),
+                note or _idle_status_message(current_stage, sources, filler_index),
                 "",
                 gr.update(value=None, visible="hidden"),
                 {"stage": current_stage, "sources": sources},
@@ -530,9 +567,12 @@ def build_demo():
 }
 """
 
-    def run_styled(*args):
+    def run_styled(backend_id, dense, question_text, settings, request: gr.Request):
         tracker = ui.ProgressTracker()
-        for message, report, download_update, meta in _run_question(*args):
+        username = _session_user(request) if request is not None else ""
+        for message, report, download_update, meta in _run_question(
+            backend_id, dense, question_text, settings, username
+        ):
             stage = meta.get("stage")
             if stage == "empty":
                 yield ui.progress_html("startup", message, state="idle"), gr.update(), download_update
@@ -585,6 +625,8 @@ def build_demo():
                             lambda text=example: text, outputs=question, queue=False, show_progress="hidden"
                         )
                 submit = gr.Button("Rechercher dans les sources", variant="primary", elem_id="ih-submit")
+                queue_indicator = gr.HTML(ui.queue_indicator_html(), elem_id="ih-queue")
+                queue_timer = gr.Timer(5)
                 status = gr.HTML(ui.idle_progress_html(), elem_id="run-status")
                 gr.HTML(ihsan.section_html("III", "La synthèse", "Citations, explications et pages consultées."))
                 answer = gr.HTML(ihsan.empty_answer_html(), elem_id="ih-answer")
@@ -628,6 +670,16 @@ def build_demo():
             ready = runtime_status.is_ready()
             return ui.runtime_banner_html(), gr.Timer(active=not ready)
 
+        def _refresh_activity(request: gr.Request):
+            job_queue.seen_online(_session_user(request) if request is not None else "")
+            return ui.queue_indicator_html()
+
+        queue_timer.tick(
+            _refresh_activity,
+            outputs=queue_indicator,
+            queue=False,
+            show_progress="hidden",
+        )
         runtime_timer.tick(
             _refresh_runtime_banner,
             outputs=[runtime_banner, runtime_timer],
@@ -734,7 +786,9 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     demo = build_demo()
-    demo.queue(default_concurrency_limit=1)
+    # Plusieurs visiteurs peuvent attendre en même temps : c'est src/job_queue.py
+    # qui garantit qu'une seule recherche tourne à la fois, avec les positions.
+    demo.queue(default_concurrency_limit=16)
     demo.launch(
         server_name=args.host,
         server_port=args.port,

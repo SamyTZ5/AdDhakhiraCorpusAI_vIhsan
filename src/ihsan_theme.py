@@ -794,6 +794,32 @@ def build_css() -> str:
   color: var(--ih-muted);
 }}
 
+/* ---------- Indicateur d'occupation (file d'attente) ---------- */
+.ih-queue {{
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 10px;
+  margin: 10px 0 0;
+  font-size: .9rem;
+  color: var(--ih-ink);
+}}
+.ih-queue-online {{
+  color: var(--ih-muted);
+  padding-left: 10px;
+  border-left: 1px solid var(--ih-line);
+}}
+.ih-queue-dot {{
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3F8A4F;
+}}
+.ih-queue-busy .ih-queue-dot {{
+  background: var(--ih-gold);
+}}
+
 /* ---------- Bandeau de démarrage de l'outil ---------- */
 .ih-runtime-banner {{
   display: flex;
