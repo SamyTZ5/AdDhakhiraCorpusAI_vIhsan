@@ -555,15 +555,18 @@ def build_demo():
         with gr.Tabs(elem_id="ih-tabs"):
             with gr.Tab("Rechercher"):
                 gr.HTML(ihsan.section_html("I", "Le moteur", "Choisissez le modèle qui rédige la synthèse."))
-                with gr.Row():
-                    backend = gr.Dropdown(
-                        choices=initial_choices,
-                        value=initial_backend,
-                        label="Moteur de réponse",
-                        info="Seuls les moteurs utilisables ici sont proposés. Ajoutez vos propres clés dans l'onglet Paramètres.",
-                    )
+                backend = gr.Radio(
+                    choices=initial_choices,
+                    value=initial_backend,
+                    label="Moteur de réponse",
+                    show_label=False,
+                    elem_id="ih-engine",
+                )
+                gr.HTML(ui.engine_note_html())
+                with gr.Accordion("Réglages de la recherche", open=False, elem_id="ih-advanced"):
                     dense_retrieval = gr.Checkbox(
                         label="Recherche par le sens (recommandé)",
+                        info="Retrouve aussi les passages qui expriment la même idée avec d'autres mots.",
                         value=bool(_config_value("ENABLE_DENSE_RETRIEVAL", True)),
                     )
 
