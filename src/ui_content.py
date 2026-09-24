@@ -138,7 +138,12 @@ def progress_html(
 
     hint = ""
     if state == "running" and step <= 2 and elapsed > 25:
-        if HOSTING == "modal_cpu":
+        if HOSTING == "kaggle":
+            hint = (
+                '<p class="ih-progress-hint">La première question de la session est la plus longue : '
+                "les modèles finissent de se charger sur les cartes graphiques. Les suivantes iront plus vite.</p>"
+            )
+        elif HOSTING == "modal_cpu":
             hint = (
                 '<p class="ih-progress-hint">Le serveur fonctionne sans carte graphique pour rester gratuit : '
                 "après une pause, il doit d'abord recharger le modèle de recherche, ce qui prend quelques "
@@ -296,6 +301,13 @@ def idle_progress_html() -> str:
 
 
 def _hosting_paragraph() -> str:
+    if HOSTING == "kaggle":
+        return (
+            "<p>Cette version tourne dans une <strong>session Kaggle</strong> ouverte par la personne qui vous a "
+            "partagé l'outil, avec deux cartes graphiques gratuites. La session dure au plus 12 heures : "
+            "<strong>le lien change à chaque nouvelle session</strong>. Au démarrage, l'outil charge ses modèles "
+            "(quelques minutes, un bandeau l'indique). Une seule question est traitée à la fois.</p>"
+        )
     if HOSTING == "modal_cpu":
         return (
             "<p>Pour rester gratuit, l'outil tourne sur un serveur <strong>sans carte graphique</strong>, qui "
