@@ -10,8 +10,8 @@ https://github.com/vllm-project/vllm/releases/download/v0.24.0/vllm-0.24.0%2Bcu1
 huggingface-hub==1.16.1
 tokenizers==0.22.2
 safetensors==0.6.2
-sentencepiece==0.2.0
-tiktoken==0.7.0
+sentencepiece==0.2.1
+tiktoken==0.8.0
 
 # Retrieval stack used directly in src/retrieval.py
 numpy==2.2.6
