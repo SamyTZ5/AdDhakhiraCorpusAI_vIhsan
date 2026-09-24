@@ -554,7 +554,7 @@ def build_demo():
         for status_message, report, download_update in _run_question(*args):
             yield status_message, ihsan.report_iframe(report), download_update
 
-    with gr.Blocks(title="Ad-Dhakhira · Institut Ihsan") as demo:
+    with gr.Blocks(title="Ad-Dhakhira") as demo:
         gr.HTML(ihsan.header_html())
         gr.HTML(ihsan.section_html("I", "Le moteur", "Choisissez le modèle qui rédige la synthèse."))
         with gr.Accordion("Aide sur les moteurs et la recherche", open=False):

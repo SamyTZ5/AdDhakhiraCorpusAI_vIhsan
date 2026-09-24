@@ -1,4 +1,4 @@
-"""Identité visuelle « Institut Ihsan » pour l'interface Gradio.
+"""Identité visuelle de l'interface Gradio (DA inspirée d'institut-ihsan.org).
 
 Tout ce qui touche à l'apparence est centralisé ici : couleurs, polices,
 en-tête, pied de page et affichage de la synthèse. Le notebook Colab et

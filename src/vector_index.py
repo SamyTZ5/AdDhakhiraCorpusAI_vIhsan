@@ -154,10 +154,16 @@ class VectorIndex:
 
     def assert_compatible(self, expected_signature: Dict) -> None:
         for key in ("index_version", "embedding_model", "backend", "chunks_sha256", "chunk_count"):
-            if self.signature.get(key) != expected_signature.get(key):
+            found = self.signature.get(key)
+            expected = expected_signature.get(key)
+            if key == "embedding_model":
+                # Un même dossier peut être écrit avec ou sans "/" final.
+                found = str(found or "").rstrip("/")
+                expected = str(expected or "").rstrip("/")
+            if found != expected:
                 raise ValueError(
                     f"Vector index mismatch for {key}: "
-                    f"expected {expected_signature.get(key)!r}, found {self.signature.get(key)!r}"
+                    f"expected {expected!r}, found {found!r}"
                 )
 
     def search(self, query_vector: np.ndarray, top_k: int) -> List[Dict]:
