@@ -188,7 +188,7 @@ def build_css() -> str:
   font-size: clamp(2.6rem, 7vw, 3.6rem);
   line-height: 1.2;
   color: var(--ih-gold);
-  margin: 0;
+  margin: 0 0 12px;
 }}
 .ih-kicker {{
   font-size: .95rem;
@@ -379,7 +379,6 @@ def header_html() -> str:
   <span class="ih-corner tl"></span><span class="ih-corner tr"></span>
   <span class="ih-corner bl"></span><span class="ih-corner br"></span>
   <p class="ih-arabic-title" lang="ar" dir="rtl">الذخيرة</p>
-  <p class="ih-kicker">Institut Ihsan</p>
   <h1>Assistant de recherche <em>dans le fiqh mālikite.</em></h1>
   <p class="ih-lead">Posez une question en arabe ou en français&nbsp;: l'assistant
   retrouve les passages pertinents dans les ouvrages de référence de l'école
