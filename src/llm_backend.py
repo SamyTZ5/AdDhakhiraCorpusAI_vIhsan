@@ -245,10 +245,6 @@ class LLMBackend(ABC):
         pass
 
     @abstractmethod
-    def truncate_by_tokens(self, text: str, max_tokens: int) -> str:
-        pass
-
-    @abstractmethod
     def get_tokenizer(self):
         pass
 
@@ -378,12 +374,6 @@ class CustomBackend(LLMBackend):
 
     def count_tokens(self, text: str) -> int:
         return len(self.tokenizer.encode(text or "", add_special_tokens=False))
-
-    def truncate_by_tokens(self, text: str, max_tokens: int) -> str:
-        token_ids = self.tokenizer.encode(text, add_special_tokens=False)
-        if len(token_ids) <= max_tokens:
-            return text
-        return self.tokenizer.decode(token_ids[:max_tokens], skip_special_tokens=True)
 
     def get_tokenizer(self):
         return self.tokenizer
@@ -571,12 +561,6 @@ class GeminiBackend(LLMBackend):
     def count_tokens(self, text: str) -> int:
         return max(1, int(len(text or "") / 4))
 
-    def truncate_by_tokens(self, text: str, max_tokens: int) -> str:
-        max_chars = max(32, int(max_tokens) * 4)
-        if len(text) <= max_chars:
-            return text
-        return text[:max_chars]
-
     def get_tokenizer(self):
         return None
 
@@ -716,12 +700,6 @@ class OpenAIBackend(LLMBackend):
 
     def count_tokens(self, text: str) -> int:
         return max(1, int(len(text or "") / 4))
-
-    def truncate_by_tokens(self, text: str, max_tokens: int) -> str:
-        max_chars = max(32, int(max_tokens) * 4)
-        if len(text) <= max_chars:
-            return text
-        return text[:max_chars]
 
     def get_tokenizer(self):
         return None
@@ -873,12 +851,6 @@ class AnthropicBackend(LLMBackend):
 
     def count_tokens(self, text: str) -> int:
         return max(1, int(len(text or "") / 4))
-
-    def truncate_by_tokens(self, text: str, max_tokens: int) -> str:
-        max_chars = max(32, int(max_tokens) * 4)
-        if len(text) <= max_chars:
-            return text
-        return text[:max_chars]
 
     def get_tokenizer(self):
         return None

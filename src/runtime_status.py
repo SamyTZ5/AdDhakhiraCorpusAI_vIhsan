@@ -1,9 +1,9 @@
 """État de préparation de l'outil, partagé entre le démarrage et l'interface.
 
-Sur un hébergement qui s'éteint quand personne ne l'utilise (Modal), le
-modèle de recherche est rechargé à chaque réveil. L'interface s'affiche tout
-de suite et lit cet état pour expliquer l'attente. Hors hébergement (Colab,
-local), l'état est « ready » dès le départ.
+Au lancement d'une session partagée (Kaggle), le corpus et le modèle de
+recherche se chargent en arrière-plan. L'interface s'affiche tout de suite et
+lit cet état pour expliquer l'attente. Dans le notebook Colab, l'état est
+« ready » dès le départ.
 
 Ce module n'est jamais rechargé entre deux questions : l'état est conservé.
 """

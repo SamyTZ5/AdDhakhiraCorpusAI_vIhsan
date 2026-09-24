@@ -16,8 +16,8 @@ from typing import Dict, List, Optional
 
 CATALOG_PATH = Path(__file__).with_name("corpus_catalog.json")
 
-# « modal_cpu » : hébergement Modal sans carte graphique, qui s'éteint entre
-# deux visites. Sinon (Colab, poste local) : valeur par défaut « colab ».
+# « kaggle » : session Kaggle partagée par un lien public. Sinon (Colab, poste
+# local) : valeur par défaut « colab ».
 HOSTING = os.environ.get("ADDHAKHIRA_HOSTING", "colab")
 
 
@@ -143,12 +143,6 @@ def progress_html(
                 '<p class="ih-progress-hint">La première question de la session est la plus longue : '
                 "les modèles finissent de se charger sur les cartes graphiques. Les suivantes iront plus vite.</p>"
             )
-        elif HOSTING == "modal_cpu":
-            hint = (
-                '<p class="ih-progress-hint">Le serveur fonctionne sans carte graphique pour rester gratuit : '
-                "après une pause, il doit d'abord recharger le modèle de recherche, ce qui prend quelques "
-                "minutes. Les questions suivantes iront bien plus vite.</p>"
-            )
         else:
             hint = (
                 '<p class="ih-progress-hint">La première question est la plus longue : le modèle de recherche '
@@ -206,7 +200,7 @@ class ProgressTracker:
 
 
 def runtime_banner_html(status: Optional[Dict] = None) -> str:
-    """Bandeau affiché pendant le réveil du serveur ; vide quand tout est prêt."""
+    """Bandeau affiché pendant le démarrage de l'outil ; vide quand tout est prêt."""
     if status is None:
         from src import runtime_status
 
@@ -223,8 +217,8 @@ def runtime_banner_html(status: Optional[Dict] = None) -> str:
         )
     return (
         '<div class="ih-runtime-banner" role="status"><span class="ih-runtime-pulse" aria-hidden="true"></span>'
-        "<div><strong>L'outil se réveille.</strong> Il s'éteint quand personne ne l'utilise, pour rester "
-        "gratuit ; au réveil, il recharge son modèle de recherche (2 à 5 minutes). Vous pouvez déjà écrire "
+        "<div><strong>L'outil démarre.</strong> Il charge son corpus et son modèle de recherche "
+        "(quelques minutes). Vous pouvez déjà écrire "
         "votre question : elle démarrera dès que tout sera prêt."
         f'<span class="ih-runtime-step">{_e(status.get("message"))} · depuis {waited}</span></div></div>'
     )
@@ -260,7 +254,7 @@ def engines_status_html(settings: Optional[Dict]) -> str:
             entry = engines.user_entry(engine_id, settings)
             if entry["key"]:
                 state, detail = "ok", f"Votre clé · modèle {entry['model'] or engines.default_model(engine_id)}"
-            elif engines.server_key(engine_id) and engines._enabled_by_host(engine_id):
+            elif engines.server_key(engine_id):
                 state, detail = "ok", f"Fourni par le serveur · modèle {engines.default_model(engine_id)}"
             else:
                 state, detail = "off", "Ajoutez une clé ci-dessus pour l'activer."
@@ -307,15 +301,6 @@ def _hosting_paragraph() -> str:
             "partagé l'outil, avec deux cartes graphiques gratuites. La session dure au plus 12 heures : "
             "<strong>le lien change à chaque nouvelle session</strong>. Au démarrage, l'outil charge ses modèles "
             "(quelques minutes, un bandeau l'indique). Une seule question est traitée à la fois.</p>"
-        )
-    if HOSTING == "modal_cpu":
-        return (
-            "<p>Pour rester gratuit, l'outil tourne sur un serveur <strong>sans carte graphique</strong>, qui "
-            "<strong>s'éteint après 15 minutes sans visite</strong>. Au réveil, il doit recharger en mémoire son "
-            "modèle de recherche (environ 16 Go) : comptez <strong>2 à 5 minutes</strong> avant la première "
-            "réponse. Un bandeau l'indique en haut de la page. Ensuite, tant que l'outil sert régulièrement, "
-            "il reste éveillé et les questions s'enchaînent sans ce délai. Une seule question est traitée à "
-            "la fois : si quelqu'un d'autre fait une recherche, la vôtre attend son tour.</p>"
         )
     return (
         "<p>La première question de la session est la plus longue : le modèle de recherche se charge "
@@ -454,13 +439,13 @@ def technical_html(project_url: str) -> str:
   (0,15). Elle est désactivée par défaut.</p>
 
   <h3>Hébergement</h3>
-  <p>Version en ligne : conteneur <a href="https://modal.com" target="_blank" rel="noopener">Modal</a> sans GPU
-  (4 processeurs, 24 Go de mémoire), avec l'embedding en float32. Le modèle et l'index sont conservés dans un
-  Volume Modal ; le conteneur s'éteint après 15 minutes d'inactivité et redémarre à la visite suivante. Au
-  démarrage, l'interface est servie immédiatement et le préchargement (corpus, modèle de recherche) se fait en
-  arrière-plan ; un verrou garantit qu'il n'a lieu qu'une fois, même si une question arrive pendant ce temps.
-  Déploiement automatique par GitHub Actions à chaque fusion dans <code>main</code>. Version de test :
-  notebook Colab (GPU T4).</p>
+  <p>Deux façons de lancer l'outil, toutes deux gratuites. <strong>Kaggle</strong> (notebook
+  <code>AdDhakhira_Kaggle.ipynb</code>) : deux GPU T4, le modèle de recherche reste chargé sur le second et le
+  moteur local Qwen2.5 7B tourne sur le premier ; l'interface est servie par FastAPI derrière la page de
+  connexion et partagée par un lien public <code>gradio.live</code>. <strong>Colab</strong> (notebook
+  <code>AdDhakhira_WebApp.ipynb</code>) : un GPU T4, pour tester avec son propre compte Google. Au démarrage,
+  l'interface est servie immédiatement et le préchargement (corpus, modèle de recherche) se fait en
+  arrière-plan ; un verrou garantit qu'il n'a lieu qu'une fois, même si une question arrive pendant ce temps.</p>
 
   <h3>Robustesse</h3>
   <ul>

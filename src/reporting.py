@@ -236,50 +236,6 @@ def render_source_reference(source_text: str, source_page_map: Optional[Dict[str
     return " | ".join(rendered)
 
 
-def format_fatwa(
-    answer: Dict,
-    source_page_map: Optional[Dict[str, Dict[str, str]]] = None,
-) -> str:
-    status = answer.get("status", "not_enough_context")
-    reponse_courte = answer.get("reponse_courte", "")
-    points = answer.get("points", [])
-    limites = answer.get("limites", "")
-    author = "Auteur inconnu"
-    title = "Livre inconnu"
-
-    lines = []
-    lines.append("Avis synthétique")
-    lines.append(reponse_courte or "Aucune conclusion n'a pu être formulée.")
-    lines.append("")
-
-    if status == "not_enough_context":
-        lines.append("Niveau de certitude")
-        lines.append("Les extraits retrouvés ne suffisent pas pour trancher de façon explicite.")
-        lines.append("")
-
-    lines.append("Preuves textuelles")
-    if points:
-        for i, p in enumerate(points, start=1):
-            citation_text = p.get("citation_arabe", "")
-            point_source_info = _infer_point_source_info(p.get("source", ""), source_page_map)
-            point_author = author
-            point_title = title
-            if point_source_info:
-                point_author = point_source_info.get("author", point_author)
-                point_title = point_source_info.get("title", point_title)
-            lines.append(f"{i}. {p.get('titre', 'Point')}")
-            lines.append(f"   Citation arabe: {point_author} dit dans {point_title} : {citation_text}")
-            lines.append(f"   Explication: {p.get('explication_fr', '')}")
-            lines.append(f"   Référence: {render_source_reference(p.get('source', ''), source_page_map)}")
-    else:
-        lines.append("Aucune preuve textuelle explicite n'a été retournée.")
-    lines.append("")
-
-    lines.append("Limites de la réponse")
-    lines.append(limites or "Aucune limite supplémentaire signalée.")
-    return "\n".join(lines)
-
-
 def print_final(
     question: str,
     keywords: List[str],
