@@ -299,3 +299,23 @@ The project is open-source and designed to be forked, improved, and adapted, as 
 - In API mode, the embedding model stays loaded between questions.
 - Models are always released after a question, even on errors.
 - Citations also carry the book identifier, so a passage is never attributed to the wrong book when two books share page numbers.
+
+## 9) Always-on hosting (Modal)
+
+Colab is fine for testing, but the link stops with the session. For a fixed, password-protected address that works without Colab, the repository ships `modal_app.py`:
+
+- a T4 GPU runs the Qwen3-Embedding-4B search model with the prebuilt index;
+- Gemini extracts keywords and writes the synthesis;
+- the app scales to zero after 10 idle minutes: Modal's free Starter plan ($30 of monthly credits) covers regular use.
+
+**Automatic deployment (recommended)**: `.github/workflows/deploy-modal.yml` publishes the app to Modal on every `git push` to `main`. One-time setup:
+
+1. on modal.com, **Settings → API Tokens → New Token**;
+2. on GitHub, **Settings → Secrets and variables → Actions**, add the `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET` secrets;
+3. on modal.com, **Secrets → Create new secret → Custom**, named `addhakhira`, with `GEMINI_API_KEY` and `APP_PASSWORD`.
+
+Progress is shown in the repository's **Actions** tab; the `…modal.run` address appears in the "Déployer l'application" log and in the Modal dashboard.
+
+Alternatives: **Step 4** of the Colab notebook, or the command line (`modal run modal_app.py::prepare_assets` once, then `modal deploy modal_app.py`).
+
+The `hf_space/` folder provides an equivalent Hugging Face Spaces (Gradio) deployment, which now requires a paid plan and uses a lighter index (`Qwen3-Embedding-0.6B`, see Step 3 of the notebook).

@@ -299,3 +299,23 @@ Le projet est open-source et conçu pour être forké, amélioré et adapté, ta
 - En mode API, le modèle d'embedding reste chargé entre deux questions.
 - Les modèles sont toujours libérés après une question, même en cas d'erreur.
 - Les citations indiquent aussi l'identifiant du livre, pour ne pas attribuer un passage au mauvais ouvrage quand deux livres ont les mêmes numéros de page.
+
+## 9) Mettre l'application en ligne en continu (Modal)
+
+Colab convient pour tester, mais le lien s'arrête avec la session. Pour une adresse fixe, protégée par mot de passe et accessible sans Colab ouvert, le dépôt fournit `modal_app.py` :
+
+- un GPU T4 fait tourner le modèle de recherche Qwen3-Embedding-4B, avec l'index préconstruit ;
+- Gemini extrait les mots-clés et rédige la synthèse ;
+- l'application s'éteint après 10 minutes sans visite : l'offre gratuite Starter de Modal (30 $ de crédits par mois) couvre un usage régulier.
+
+**Déploiement automatique (recommandé)** : le fichier `.github/workflows/deploy-modal.yml` publie l'application sur Modal à chaque `git push` sur la branche `main`. À préparer une seule fois :
+
+1. sur modal.com, **Settings → API Tokens → New Token** ;
+2. sur GitHub, **Settings → Secrets and variables → Actions**, créer les secrets `MODAL_TOKEN_ID` et `MODAL_TOKEN_SECRET` ;
+3. sur modal.com, **Secrets → Create new secret → Custom**, nommé `addhakhira`, avec `GEMINI_API_KEY` et `APP_PASSWORD`.
+
+Le suivi se fait dans l'onglet **Actions** du dépôt ; l'adresse `…modal.run` apparaît dans le journal de l'étape « Déployer l'application » et dans le tableau de bord Modal.
+
+Autres possibilités : l'**Étape 4** du notebook Colab, ou la ligne de commande (`modal run modal_app.py::prepare_assets` une fois, puis `modal deploy modal_app.py`).
+
+Le dossier `hf_space/` permet un déploiement équivalent sur Hugging Face Spaces (Gradio), qui nécessite désormais un abonnement payant et utilise un index léger (`Qwen3-Embedding-0.6B`, voir l'Étape 3 du notebook).
