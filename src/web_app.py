@@ -14,6 +14,7 @@ from typing import Dict, List
 from src import config as base_config
 from src.reporting import write_output_with_timing
 from src import ihsan_theme as ihsan
+from src import ui_content as ui
 
 
 BACKEND_CHOICES = [
@@ -351,10 +352,10 @@ def _run_question(
 
     question = (question or "").strip()
     if not question:
-        yield "Saisis une question.", "", gr.update(value=None, visible="hidden")
+        yield "Écrivez une question pour lancer la recherche.", "", gr.update(value=None, visible="hidden"), {"stage": "empty", "sources": []}
         return
     if backend != "default" and not _api_key_for_backend(backend, api_key):
-        yield "La clé API est requise pour ce backend.", "", gr.update(value=None, visible="hidden")
+        yield "La clé API est requise pour ce moteur.", "", gr.update(value=None, visible="hidden"), {"stage": "error", "sources": []}
         return
 
     cfg = _runtime_config(
@@ -429,6 +430,7 @@ def _run_question(
             "Votre question est actuellement en queue. Veuillez laisser cette page ouverte ; une notification pourra vous prévenir quand l'assistant commencera à la traiter.",
             "",
             gr.update(value=None, visible="hidden"),
+            {"stage": current_stage, "sources": sources},
         )
         while _pipeline_lock.locked():
             time.sleep(8)
@@ -437,6 +439,7 @@ def _run_question(
                 _idle_status_message(current_stage, sources, filler_index),
                 "",
                 gr.update(value=None, visible="hidden"),
+                {"stage": current_stage, "sources": sources},
             )
         worker = start_worker()
     else:
@@ -446,6 +449,7 @@ def _run_question(
             "Bienvenue. L'assistant démarre, prépare l'environnement puis charge les modèles. Merci de patienter...",
             "",
             gr.update(value=None, visible="hidden"),
+            {"stage": current_stage, "sources": sources},
         )
 
     while worker.is_alive() or not events.empty():
@@ -457,6 +461,7 @@ def _run_question(
                 _idle_status_message(current_stage, sources, filler_index),
                 "",
                 gr.update(value=None, visible="hidden"),
+                {"stage": current_stage, "sources": sources},
             )
             continue
 
@@ -473,7 +478,7 @@ def _run_question(
             filler_index += 1
 
         if message:
-            yield message, "", gr.update(value=None, visible="hidden")
+            yield message, "", gr.update(value=None, visible="hidden"), {"stage": current_stage, "sources": sources}
 
     worker.join()
     yield (
@@ -483,6 +488,7 @@ def _run_question(
             value=result.get("output_path"),
             visible=bool(result.get("output_path")),
         ),
+        {"stage": "done" if result.get("output_path") else "error", "sources": sources},
     )
 
 
@@ -557,68 +563,74 @@ def build_demo():
 """
 
     def run_styled(*args):
-        for status_message, report, download_update in _run_question(*args):
-            yield status_message, ihsan.report_iframe(report), download_update
+        tracker = ui.ProgressTracker()
+        for message, report, download_update, meta in _run_question(*args):
+            stage = meta.get("stage")
+            if stage == "empty":
+                yield ui.progress_html("startup", message, state="idle"), gr.update(), download_update
+                continue
+            state = stage if stage in ("done", "error") else "running"
+            progress = tracker.render(
+                message,
+                stage if state == "running" else None,
+                sources=meta.get("sources"),
+                state=state,
+            )
+            yield progress, ihsan.report_iframe(report), download_update
 
     with gr.Blocks(title="Ad-Dhakhira") as demo:
         gr.HTML(ihsan.header_html())
-        gr.HTML(ihsan.section_html("I", "Le moteur", "Choisissez le modèle qui rédige la synthèse."))
-        with gr.Accordion("Aide sur les moteurs et la recherche", open=False):
-            gr.Markdown(
-                """
-### Options d'inférence
+        with gr.Tabs(elem_id="ih-tabs"):
+            with gr.Tab("Rechercher"):
+                gr.HTML(ihsan.section_html("I", "Le moteur", "Choisissez le modèle qui rédige la synthèse."))
+                with gr.Row():
+                    backend = gr.Dropdown(
+                        choices=BACKEND_CHOICES,
+                        value=initial_backend,
+                        label="Moteur de réponse",
+                    )
+                    dense_retrieval = gr.Checkbox(
+                        label="Recherche par le sens (recommandé)",
+                        value=bool(_config_value("ENABLE_DENSE_RETRIEVAL", True)),
+                    )
+                api_key = gr.Textbox(
+                    label="Clé API",
+                    type="password",
+                    value=_config_api_key_for_backend(initial_backend) if initial_backend != "default" else "",
+                    visible=(initial_backend != "default"),
+                )
 
-Vous pouvez écrire votre question indifféremment en arabe ou en français.
-
-- `Default` : fonctionnement par défaut du chat. Il utilise les modèles locaux configurés pour cette instance.
-- `Gemini API` : utilise Gemini. Pour connecter votre compte Google à cette interface, suivez le guide officiel, créez une clé `GEMINI_API_KEY`, copiez-la, puis collez-la dans le champ `Clé API` ([guide officiel des clés API](https://ai.google.dev/gemini-api/docs/api-key?hl=fr)).
-- `ChatGPT / OpenAI API` : utilise ChatGPT. Pour connecter votre compte ChatGPT à cette interface, suivez le quickstart officiel, créez une clé `OPENAI_API_KEY`, copiez-la, puis collez-la dans le champ `Clé API` ([quickstart officiel, en anglais](https://developers.openai.com/api/docs/quickstart)).
-- `Claude / Anthropic API` : utilise Claude. Pour connecter votre compte Claude à cette interface, suivez l'aperçu officiel de l'API, créez une clé `ANTHROPIC_API_KEY`, copiez-la, puis collez-la dans le champ `Clé API` ([aperçu officiel de l'API](https://platform.claude.com/docs/fr/api/overview)).
-
-### Option de recherche
-
-`Retrieval dense` : il est recommandé de laisser cette case cochée. Elle aide l'assistant à retrouver des passages proches du sens de votre question, même si les mots exacts ne sont pas les mêmes. Si vous la décochez, la recherche devient plus classique, surtout basée sur les mots-clés et les correspondances lexicales ; cela peut servir de comparaison, mais c'est généralement moins efficace.
-
-Code source et explications détaillées : [AdDhakhiraCorpusAI](https://github.com/git-haddadz/AdDhakhiraCorpusAI). Projet expérimental de recherche assistée par IA ; consultez le dépôt pour les prérequis, les limites et les options de configuration.
-"""
-            )
-        with gr.Row():
-            backend = gr.Dropdown(
-                choices=BACKEND_CHOICES,
-                value=initial_backend,
-                label="Moteur de réponse",
-            )
-            dense_retrieval = gr.Checkbox(
-                label="Recherche par le sens (recommandé)",
-                value=bool(_config_value("ENABLE_DENSE_RETRIEVAL", True)),
-            )
-
-        api_key = gr.Textbox(
-            label="Clé API",
-            type="password",
-            value=_config_api_key_for_backend(initial_backend) if initial_backend != "default" else "",
-            visible=(initial_backend != "default"),
-        )
-
-        gr.HTML(ihsan.section_html("II", "Votre question", "En arabe ou en français."))
-        question = gr.Textbox(
-            label="Question",
-            show_label=False,
-            lines=4,
-            placeholder="Par exemple : quelles sont les conditions de validité de la prière ?",
-            elem_id="ih-question",
-        )
-        submit = gr.Button("Rechercher dans les sources", variant="primary", elem_id="ih-submit")
-        status = gr.Markdown(elem_id="run-status")
-        gr.HTML(ihsan.section_html("III", "La synthèse", "Citations, explications et pages consultées."))
-        answer = gr.HTML(ihsan.empty_answer_html(), elem_id="ih-answer")
-        download = gr.DownloadButton(
-            label="Télécharger la synthèse",
-            value=None,
-            variant="secondary",
-            visible="hidden",
-            elem_id="ih-download",
-        )
+                gr.HTML(ihsan.section_html("II", "Votre question", "En arabe ou en français."))
+                question = gr.Textbox(
+                    label="Question",
+                    show_label=False,
+                    lines=4,
+                    placeholder="Par exemple : quelles sont les conditions de validité de la prière ?",
+                    elem_id="ih-question",
+                )
+                gr.HTML('<p class="ih-examples-label">Exemples, cliquez pour les reprendre :</p>')
+                with gr.Row(elem_id="ih-examples"):
+                    for example in ui.EXAMPLE_QUESTIONS:
+                        gr.Button(example, size="sm", variant="secondary").click(
+                            lambda text=example: text, outputs=question, queue=False, show_progress="hidden"
+                        )
+                submit = gr.Button("Rechercher dans les sources", variant="primary", elem_id="ih-submit")
+                status = gr.HTML(ui.idle_progress_html(), elem_id="run-status")
+                gr.HTML(ihsan.section_html("III", "La synthèse", "Citations, explications et pages consultées."))
+                answer = gr.HTML(ihsan.empty_answer_html(), elem_id="ih-answer")
+                download = gr.DownloadButton(
+                    label="Télécharger la synthèse",
+                    value=None,
+                    variant="secondary",
+                    visible="hidden",
+                    elem_id="ih-download",
+                )
+            with gr.Tab("Guide"):
+                gr.HTML(ui.guide_html())
+            with gr.Tab("Le corpus"):
+                gr.HTML(ui.corpus_html())
+            with gr.Tab("Sous le capot"):
+                gr.HTML(ui.technical_html(ihsan.PROJECT_URL))
         gr.HTML(ihsan.footer_html())
 
         backend.change(
@@ -638,6 +650,7 @@ Code source et explications détaillées : [AdDhakhiraCorpusAI](https://github.c
             ],
             outputs=[status, answer, download],
             js=notify_js,
+            show_progress="hidden",
         )
 
     return demo

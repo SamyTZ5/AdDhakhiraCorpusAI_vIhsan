@@ -436,6 +436,11 @@ def _build_final_report(
             "adversarial_verdict": "insufficient",
         }
     else:
+        _emit_progress(
+            progress_callback,
+            "Je relis la réponse : deux vérifications indépendantes contrôlent qu'elle ne dit rien de plus que les extraits.",
+            stage="verification",
+        )
         consistency = _evaluate_answer(answer)
     coherence_diag: Dict[str, object] = {
         **keyword_diagnostic,
@@ -464,6 +469,11 @@ def _build_final_report(
             "Correct all overclaims and contradictions and ground every key claim in direct evidence.\n"
             "If a required condition is not explicitly verified in the question, respond conditionally.\n"
             f"Verifier issues: {issues}"
+        )
+        _emit_progress(
+            progress_callback,
+            "La vérification a relevé un point fragile : je corrige la réponse à partir des extraits.",
+            stage="correction",
         )
         answer, retry_generation_failed = _safe_generate_answer("reasoner_retry", extra_rules)
         if retry_generation_failed:
@@ -505,6 +515,11 @@ def _build_final_report(
                 "When question facts already determine a condition, give a direct conclusion (not a hypothetical one).\n"
                 "Do not keep mutually inconsistent statements between short answer and limits.\n"
                 f"Issues to resolve: {all_issues}"
+            )
+            _emit_progress(
+                progress_callback,
+                "Dernière passe de correction pour aligner chaque affirmation sur les preuves.",
+                stage="correction",
             )
             answer, final_generation_failed = _safe_generate_answer("reasoner_final", final_pass_rules)
             if final_generation_failed:

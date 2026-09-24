@@ -41,7 +41,8 @@ GOOGLE_FONTS_URL = (
     "family=Source+Sans+3:wght@400;600&display=swap"
 )
 
-PROJECT_URL = "https://github.com/git-haddadz/AdDhakhiraCorpusAI"
+PROJECT_URL = "https://github.com/SamyTZ5/AdDhakhiraCorpusAI_vIhsan"
+UPSTREAM_URL = "https://github.com/git-haddadz/AdDhakhiraCorpusAI"
 
 
 # --------------------------------------------------------------------------
@@ -279,7 +280,7 @@ def build_css() -> str:
   border: 1px solid var(--ih-gold) !important;
   font-weight: 600 !important;
 }}
-#run-status p {{
+#run-status .ih-progress-idle p {{
   margin: 14px 0 0;
   padding-left: 14px;
   border-left: 2px solid var(--ih-gold);
@@ -339,12 +340,513 @@ def build_css() -> str:
   color: var(--ih-bordeaux);
 }}
 
+/* ---------- Onglets ---------- */
+#ih-tabs {{
+  margin-top: 6px;
+}}
+#ih-tabs button[role="tab"] {{
+  font-family: var(--ih-display) !important;
+  font-size: 1.15rem !important;
+  font-weight: 600 !important;
+  color: var(--ih-muted) !important;
+  border: 0 !important;
+  border-bottom: 2px solid transparent !important;
+  background: transparent !important;
+  padding: 10px 16px !important;
+}}
+#ih-tabs .tab-container {{
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+}}
+#ih-tabs button[role="tab"]:hover {{
+  color: var(--ih-bordeaux) !important;
+}}
+#ih-tabs button[role="tab"][aria-selected="true"] {{
+  color: var(--ih-bordeaux) !important;
+  border-bottom-color: var(--ih-gold) !important;
+}}
+#ih-tabs button[role="tab"]:focus-visible {{
+  outline: 2px solid var(--ih-gold) !important;
+  outline-offset: 2px;
+}}
+
+/* ---------- Pages de documentation ---------- */
+.ih-doc {{
+  max-width: 44em;
+  line-height: 1.7;
+  font-size: 1.02rem;
+  color: var(--ih-ink);
+  padding: 8px 0 12px;
+}}
+.ih-doc-lead {{
+  font-family: var(--ih-display);
+  font-size: 1.35rem;
+  line-height: 1.5;
+  color: var(--ih-ink);
+  margin: 14px 0 18px;
+}}
+.ih-doc h3 {{
+  font-family: var(--ih-display);
+  font-size: 1.45rem;
+  font-weight: 600;
+  color: var(--ih-bordeaux);
+  margin: 28px 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--ih-line);
+}}
+.ih-doc p, .ih-doc li, .ih-doc dd {{
+  color: var(--ih-ink);
+}}
+.ih-doc ul {{
+  padding-left: 1.2em;
+}}
+.ih-doc li {{
+  margin: 6px 0;
+}}
+.ih-doc [lang="ar"] {{
+  font-family: var(--ih-arabic);
+  font-size: 1.1em;
+}}
+.ih-doc code {{
+  font-size: .85em;
+  background: #F3EBDD;
+  padding: 1px 5px;
+  color: var(--ih-bordeaux);
+}}
+.ih-doc a {{
+  color: var(--ih-bordeaux);
+}}
+.ih-dl {{
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 20px;
+  margin: 8px 0;
+}}
+.ih-dl dt {{
+  font-weight: 600;
+  color: var(--ih-bordeaux);
+}}
+.ih-dl dd {{
+  margin: 0;
+}}
+.ih-pipeline {{
+  list-style: none;
+  counter-reset: step;
+  padding: 0;
+  margin: 12px 0;
+}}
+.ih-pipeline li {{
+  list-style: none !important;
+  counter-increment: step;
+  position: relative;
+  padding: 0 0 18px 52px;
+  margin: 0;
+}}
+.ih-pipeline li::before {{
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--ih-gold);
+  color: var(--ih-bordeaux);
+  font-family: var(--ih-display);
+  font-weight: 600;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ih-card);
+}}
+.ih-pipeline li::marker {{
+  content: "";
+}}
+.ih-pipeline li:not(:last-child)::after {{
+  content: "";
+  position: absolute;
+  left: 17px;
+  top: 36px;
+  bottom: 2px;
+  width: 1px;
+  background: var(--ih-line);
+}}
+.ih-table-wrap {{
+  overflow-x: auto;
+  margin: 10px 0;
+}}
+.ih-table {{
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .93rem;
+}}
+.ih-table th, .ih-table td {{
+  border: 1px solid var(--ih-line);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+  color: var(--ih-ink);
+}}
+.ih-table th {{
+  background: #F3EBDD;
+  color: var(--ih-bordeaux);
+  font-weight: 600;
+}}
+.ih-table-compact td:first-child {{
+  white-space: nowrap;
+}}
+
+/* ---------- Corpus ---------- */
+.ih-stats {{
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid var(--ih-line);
+  background: var(--ih-card);
+  margin: 16px 0 6px;
+}}
+.ih-stats div {{
+  padding: 16px 12px;
+  text-align: center;
+}}
+.ih-stats div + div {{
+  border-left: 1px solid var(--ih-line);
+}}
+.ih-stats strong {{
+  display: block;
+  font-family: var(--ih-display);
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--ih-bordeaux);
+  line-height: 1.1;
+}}
+.ih-stats span {{
+  font-size: .88rem;
+  color: var(--ih-muted);
+}}
+.ih-timeline {{
+  position: relative;
+  height: 52px;
+  margin: 18px 12px 0;
+}}
+.ih-timeline .axis {{
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 16px;
+  height: 1px;
+  background: var(--ih-gold);
+}}
+.ih-timeline .tick {{
+  position: absolute;
+  top: 10px;
+  width: 1px;
+  height: 13px;
+  background: var(--ih-gold);
+}}
+.ih-timeline .tick span {{
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: .78rem;
+  color: var(--ih-muted);
+}}
+.ih-timeline .ih-tl-dot {{
+  display: block;
+  box-sizing: border-box;
+  padding: 0 !important;
+  text-decoration: none;
+  position: absolute;
+  top: 11px;
+  width: 11px;
+  height: 11px;
+  margin-left: -5.5px;
+  background: var(--ih-bordeaux);
+  border: 2px solid var(--ih-paper);
+  transform: rotate(45deg);
+}}
+.ih-timeline .ih-tl-dot:hover, .ih-timeline .ih-tl-dot:focus-visible {{
+  background: var(--ih-gold);
+  outline: none;
+}}
+.ih-timeline-caption {{
+  text-align: center;
+  font-size: .82rem;
+  color: var(--ih-muted);
+  margin: 0 0 18px;
+}}
+.ih-books {{
+  border-top: 1px solid var(--ih-line);
+}}
+.ih-book {{
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--ih-line);
+  scroll-margin-top: 20px;
+}}
+.ih-book:target {{
+  background: #FBF3E4;
+}}
+.ih-book-year {{
+  font-family: var(--ih-display);
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: var(--ih-gold);
+  text-align: right;
+  line-height: 1.1;
+}}
+.ih-book-year span {{
+  display: block;
+  font-size: .8rem;
+  color: var(--ih-muted);
+}}
+.ih-book h4 {{
+  font-family: var(--ih-arabic);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--ih-bordeaux);
+  margin: 0;
+  text-align: left;
+}}
+.ih-book p {{
+  margin: 3px 0;
+  color: var(--ih-ink);
+}}
+.ih-book-latin {{
+  font-family: var(--ih-display);
+  font-style: italic;
+  font-size: 1.12rem;
+}}
+.ih-book-author {{
+  font-size: .95rem;
+}}
+.ih-book-author-ar {{
+  font-family: var(--ih-arabic);
+  color: var(--ih-muted);
+  margin-left: 6px;
+}}
+.ih-muted {{
+  color: var(--ih-muted);
+}}
+.ih-book-facts {{
+  font-size: .85rem;
+  color: var(--ih-muted) !important;
+}}
+.ih-book details {{
+  margin-top: 6px;
+}}
+.ih-book summary {{
+  cursor: pointer;
+  font-size: .88rem;
+  color: var(--ih-bordeaux);
+}}
+.ih-book-edition, .ih-book-bio li {{
+  font-family: var(--ih-arabic);
+  font-size: 1rem;
+  line-height: 1.8;
+}}
+.ih-book-bio {{
+  margin: 6px 0 0;
+  padding-right: 1.2em;
+}}
+
+/* ---------- Exemples de questions ---------- */
+#ih-examples {{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 2px 0 6px;
+}}
+#ih-examples button {{
+  font-size: .9rem !important;
+  font-weight: 400 !important;
+  padding: 6px 12px !important;
+  border: 1px solid var(--ih-line) !important;
+  background: var(--ih-card) !important;
+  color: var(--ih-ink) !important;
+  min-width: 0 !important;
+  flex: 0 1 auto !important;
+  width: auto !important;
+  max-width: 100% !important;
+  white-space: normal !important;
+  text-align: start !important;
+  unicode-bidi: plaintext;
+}}
+#ih-examples button:hover {{
+  border-color: var(--ih-gold) !important;
+  color: var(--ih-bordeaux) !important;
+}}
+.ih-examples-label {{
+  font-size: .88rem;
+  color: var(--ih-muted);
+  margin: 6px 0 4px;
+}}
+
+/* ---------- Jauge d'avancement ---------- */
+.ih-progress {{
+  margin: 14px 0 0;
+  padding: 16px 18px 14px;
+  background: var(--ih-card);
+  border: 1px solid var(--ih-line);
+}}
+.ih-progress-idle {{
+  background: transparent;
+  border: 0;
+  padding: 6px 0 0;
+}}
+.ih-progress-idle .ih-progress-msg {{
+  font-style: italic;
+}}
+.ih-progress-error {{
+  border-color: var(--ih-bordeaux);
+  border-left-width: 3px;
+}}
+.ih-steps {{
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+}}
+.ih-steps li {{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  font-size: .8rem;
+  color: var(--ih-muted);
+  position: relative;
+  margin: 0;
+  text-align: center;
+}}
+.ih-steps li:not(:first-child)::before {{
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 50%;
+  width: 100%;
+  height: 1px;
+  background: var(--ih-line);
+  z-index: 0;
+}}
+.ih-steps li.done:not(:first-child)::before, .ih-steps li.current:not(:first-child)::before, .ih-steps li.error:not(:first-child)::before {{
+  background: var(--ih-gold);
+}}
+.ih-steps .ih-step-mark {{
+  width: 13px;
+  height: 13px;
+  transform: rotate(45deg);
+  border: 1px solid var(--ih-line);
+  background: var(--ih-card);
+  position: relative;
+  z-index: 1;
+}}
+.ih-steps li.done .ih-step-mark {{
+  background: var(--ih-gold);
+  border-color: var(--ih-gold);
+}}
+.ih-steps li.current .ih-step-mark {{
+  background: var(--ih-bordeaux);
+  border-color: var(--ih-bordeaux);
+}}
+.ih-steps li.error .ih-step-mark {{
+  background: var(--ih-card);
+  border: 2px solid var(--ih-bordeaux);
+}}
+.ih-steps li.current, .ih-steps li.error {{
+  color: var(--ih-bordeaux);
+  font-weight: 600;
+}}
+.ih-bar {{
+  height: 6px;
+  background: #EFE5D4;
+  overflow: hidden;
+}}
+.ih-bar-fill {{
+  height: 100%;
+  width: var(--to);
+  background: var(--ih-bordeaux);
+  animation: ih-grow 8s ease-out;
+}}
+.ih-progress-done .ih-bar-fill {{
+  background: var(--ih-gold);
+  animation: none;
+}}
+.ih-progress-error .ih-bar-fill {{
+  animation: none;
+  opacity: .45;
+}}
+@keyframes ih-grow {{
+  from {{ width: var(--from); }}
+  to {{ width: var(--to); }}
+}}
+.ih-progress-meta {{
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  margin-top: 10px;
+}}
+.ih-progress-msg {{
+  margin: 0;
+  color: var(--ih-ink);
+  font-size: .95rem;
+}}
+.ih-progress-time {{
+  flex: none;
+  font-size: .85rem;
+  color: var(--ih-muted);
+  font-variant-numeric: tabular-nums;
+}}
+.ih-progress-done .ih-progress-time, .ih-progress-error .ih-progress-time {{
+  color: var(--ih-bordeaux);
+  font-weight: 600;
+}}
+.ih-progress-sources {{
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: .85rem;
+  color: var(--ih-muted);
+}}
+.ih-progress-sources > span:first-child {{
+  margin-right: 4px;
+}}
+.ih-chip {{
+  font-family: var(--ih-arabic);
+  font-size: .98rem;
+  color: var(--ih-bordeaux);
+  border: 1px solid var(--ih-gold);
+  padding: 0 8px;
+  background: #FFFDF7;
+}}
+.ih-progress-hint {{
+  margin: 8px 0 0;
+  font-size: .85rem;
+  color: var(--ih-muted);
+  font-style: italic;
+}}
+
 @media (max-width: 640px) {{
   body .gradio-container {{ padding: 12px 12px 28px !important; }}
   body .gradio-container .main {{ padding: 8px 0 !important; }}
   #ih-header {{ padding: 36px 22px 32px; }}
   .ih-section {{ flex-wrap: wrap; }}
   .ih-section p {{ margin-left: 0; text-align: left; width: 100%; }}
+  .ih-steps .lbl {{ font-size: .75rem; white-space: nowrap; }}
+  .ih-steps li:not(.current):not(.error) .lbl {{ visibility: hidden; }}
+  #ih-tabs button[role="tab"] {{ padding: 8px 10px !important; font-size: 1.02rem !important; }}
+  .ih-progress-meta {{ flex-direction: column; gap: 4px; }}
+  .ih-stats strong {{ font-size: 1.5rem; }}
+  .ih-book {{ grid-template-columns: 1fr; gap: 4px; }}
+  .ih-book-year {{ text-align: left; }}
+  .ih-dl {{ grid-template-columns: 1fr; gap: 2px; }}
+  .ih-dl dd {{ margin-bottom: 8px; }}
 }}
 
 @media (prefers-reduced-motion: reduce) {{
@@ -401,7 +903,8 @@ def footer_html(project_url: str = PROJECT_URL) -> str:
   <div class="ih-rule" aria-hidden="true"><span></span></div>
   <p>Outil de recherche bibliographique&nbsp;: il aide à retrouver et lire les sources,
   il ne délivre pas de fatwa.</p>
-  <p>Projet open source&nbsp;: <a href="{_html.escape(project_url)}" target="_blank" rel="noopener">AdDhakhiraCorpusAI</a></p>
+  <p>Projet open source&nbsp;: <a href="{_html.escape(project_url)}" target="_blank" rel="noopener">code de cette version</a>,
+  d'après <a href="{_html.escape(UPSTREAM_URL)}" target="_blank" rel="noopener">AdDhakhiraCorpusAI</a></p>
 </footer>
 """
 

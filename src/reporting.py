@@ -94,7 +94,7 @@ def _render_consistency_html(consistency_diagnostic: Optional[Dict[str, object]]
     return f"""
     <section class="tab-panel" id="panel-debug" role="tabpanel">
       <div class="card">
-        <h3>Diagnostic Cohérence</h3>
+        <h3>Diagnostic de cohérence</h3>
         <div class="table-wrap">
           <table class="diag-table">
             <tbody>
@@ -369,7 +369,7 @@ def print_final(
     debug_tab = ""
     debug_panel = ""
     if consistency_diagnostic:
-        debug_tab = "<button class='tab-btn' data-tab='debug'>Debug</button>"
+        debug_tab = "<button class='tab-btn' data-tab='debug'>Diagnostic</button>"
         debug_panel = _render_consistency_html(consistency_diagnostic)
 
     return f"""<!doctype html>

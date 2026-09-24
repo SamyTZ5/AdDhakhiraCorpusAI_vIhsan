@@ -1,0 +1,457 @@
+{
+ "generated_from": "database/",
+ "book_count": 18,
+ "total_pages": 50832,
+ "total_passages": 90392,
+ "books": [
+  {
+   "source_id": "014591",
+   "title": "التبصرة للخمي",
+   "title_latin": "al-Tabsirah li-l-Lakhmi",
+   "authors": [
+    {
+     "name": "اللخمي، أبو الحسن",
+     "death_hijri": 478,
+     "main": true
+    }
+   ],
+   "author_latin": "al-Lakhmi, Abu al-Hasan",
+   "main_author_death_hijri": 478,
+   "publisher": "وزارة الأوقاف والشؤون الإسلامية، قطر",
+   "edition": "الأولى، ١٤٣٢ هـ - ٢٠١١ م",
+   "volumes": 15,
+   "indexed_pages": 6502,
+   "indexed_passages": 6501,
+   "author_bio": [
+    "اللَّخْمي (٠٠٠ - ٤٧٨ هـ = ٠٠٠ - ١٠٨٥ م)",
+    "علي بن محمد الربعي، أبو الحسن، المعروف باللخمي: فقيه مالكي، له معرفة بالأدب والحديث، قيرواني الأصل. نزل سفاقس وتوفي بها. صنف كتبا مفيدة، من أحسنها تعليق كبير على المدونة",
+    "في فقه المالكية، سماه «التبصرة» أورد فيه آراء خرج بها عن المذهب. وله «فضائل الشام - خ» بدار الكتب، ألفه سنة ٤٣٥.",
+    "نقلا عن: «الأعلام» للزركلي"
+   ]
+  },
+  {
+   "source_id": "021735",
+   "title": "المقدمات الممهدات",
+   "title_latin": "al-Muqaddimat al-Mumahhidat",
+   "authors": [
+    {
+     "name": "ابن رشد الجد",
+     "death_hijri": 520,
+     "main": true
+    }
+   ],
+   "author_latin": "Ibn Rushd al-Jadd",
+   "main_author_death_hijri": 520,
+   "publisher": "دار الغرب الإسلامي، بيروت - لبنان",
+   "edition": "الأولى، ١٤٠٨ هـ - ١٩٨٨ م",
+   "volumes": 3,
+   "indexed_pages": 1626,
+   "indexed_passages": 1658,
+   "author_bio": [
+    "ابن رشد (٤٥٠ - ٥٢٠ هـ = ١٠٥٨ - ١١٢٦ م)",
+    "أبو الوليد، محمد بن أحمد بن رشد القرطبي:",
+    "قاضي الجماعة بقرطبة. من أعيان المالكية.",
+    "وهو جد ابن رشد الفيلسوف (محمد بن أحمد)"
+   ]
+  },
+  {
+   "source_id": "121376",
+   "title": "شرح التلقين",
+   "title_latin": "Sharh al-Talqin",
+   "authors": [
+    {
+     "name": "المازري",
+     "death_hijri": 536,
+     "main": true
+    }
+   ],
+   "author_latin": "al-Maziri",
+   "main_author_death_hijri": 536,
+   "publisher": "دار الغرب الإِسلامي",
+   "edition": "الطبعة الأولى، ٢٠٠٨ م",
+   "volumes": 5,
+   "indexed_pages": 3223,
+   "indexed_passages": 3248,
+   "author_bio": [
+    "المازَري (٤٥٣ - ٥٣٦ هـ = ١٠٦١ - ١١٤١ م)",
+    "محمد بن علي بن عمر التَّمِيمي المازري، أبو عبد الله: محدث، من فقهاء المالكية. نسبته إلى (مازر) (Mazzara)  بجزيرة صقلّيّة، ووفاته بالمهدية.",
+    "له:",
+    "(المعلم بفوائد مسلم - خ) [ثم طُبع] في الحديث، وهو ما علق به على صحيح مسلم، حين قراءته عليه سنة ٤٩٩ وقيده تلاميذه. فمنه ما هو بحكاية لفظه وأكثره بمعناه. انظر مخطوطته في خزانة الرباط (٩٤ أوقاف) وهي جيدة كتبت سنة ٦٢٩"
+   ]
+  },
+  {
+   "source_id": "001717",
+   "title": "الذخيرة للقرافي",
+   "title_latin": "al-Dhakhira li-l-Qarafi",
+   "authors": [
+    {
+     "name": "القرافي",
+     "death_hijri": 684,
+     "main": true
+    }
+   ],
+   "author_latin": "al-Qarafi",
+   "main_author_death_hijri": 684,
+   "publisher": "دار الغرب الإسلامي- بيروت",
+   "edition": "الأولى، ١٩٩٤ م",
+   "volumes": 13,
+   "indexed_pages": 5319,
+   "indexed_passages": 8827,
+   "author_bio": [
+    "القرافي (٠٠٠ - ٦٨٤ هـ = ٠٠٠ - ١٢٨٥ م)",
+    "أحمد بن إدريس بن عبد الرحمن، أبو العباس، شهاب الدين الصنهاجي القرافي: من علماء المالكية نسبته إلى قبيلة صنهاجة (من برابرة المغرب) وإلى القرافة (المحلة المجاورة لقبر الإمام الشافعي) بالقاهرة. وهو مصري المولد والمنشأ والوفاة.",
+    "له مصنفات جليلة في الفقه والأصول، منها:",
+    "(أنوار البروق في أنواء الفروق - ط) أربعة أجزاء،"
+   ]
+  },
+  {
+   "source_id": "011406",
+   "title": "المدخل لابن الحاج",
+   "title_latin": "al-Madkhal li-Ibn al-Hajj",
+   "authors": [
+    {
+     "name": "ابن الحاج",
+     "death_hijri": 737,
+     "main": true
+    }
+   ],
+   "author_latin": "Ibn al-Hajj",
+   "main_author_death_hijri": 737,
+   "publisher": "دار التراث",
+   "edition": "بدون طبعة وبدون تاريخ",
+   "volumes": 4,
+   "indexed_pages": 1246,
+   "indexed_passages": 2493,
+   "author_bio": [
+    "ابن الحاج ( ٠٠٠ - ٧٣٧ هـ = ٠٠٠ - ١٣٣٦ م)",
+    "محمد بن محمد بن محمد ابن الحاج، أبو عبد الله العبدري المالكي الفاسي، نزيل مصر: فاضل.",
+    "تفقه في بلاده، وقدم مصر، وحج، وكف بصره في آخر عمره وأقعد.",
+    "وتوفي بالقاهرة، عن نحو ٨٠ عاما."
+   ]
+  },
+  {
+   "source_id": "006193",
+   "title": "القوانين الفقهية",
+   "title_latin": "al-Qawanin al-Fiqhiyyah",
+   "authors": [
+    {
+     "name": "ابن جزي الكلبي",
+     "death_hijri": 741,
+     "main": true
+    }
+   ],
+   "author_latin": "Ibn Juzayy al-Kalbi",
+   "main_author_death_hijri": 741,
+   "publisher": "",
+   "edition": "",
+   "volumes": 1,
+   "indexed_pages": 292,
+   "indexed_passages": 567,
+   "author_bio": [
+    "ابن جزي الكلبي (٦٩٣ - ٧٤١ هـ = ١٢٩٤ - ١٣٤٠ م)",
+    "محمد بن أحمد بن محمد بن عبد الله، ابن جزي الكلبي، أبو القاسم",
+    "فقيه من العلماء بالأصول واللغة. من أهل غرناطة.",
+    "من كتبه:"
+   ]
+  },
+  {
+   "source_id": "014442",
+   "title": "التوضيح في شرح مختصر ابن الحاجب",
+   "title_latin": "al-Tawdih fi Sharh Mukhtasar Ibn al-Hajib",
+   "authors": [
+    {
+     "name": "خليل بن إسحاق الجندي",
+     "death_hijri": 776,
+     "main": true
+    }
+   ],
+   "author_latin": "Khalil ibn Ishaq al-Jundi",
+   "main_author_death_hijri": 776,
+   "publisher": "مركز نجيبويه للمخطوطات وخدمة التراث",
+   "edition": "الأولى، ١٤٢٩هـ - ٢٠٠٨م",
+   "volumes": 8,
+   "indexed_pages": 4726,
+   "indexed_passages": 4732,
+   "author_bio": [
+    "خليل بن إسحاق الجندي (٠٠٠ - ٧٧٦ هـ = ٠٠٠ - ١٣٧٤ م)",
+    "خليل بن إسحاق بن موسى، ضياء الدين الجندي المالكي المصري:",
+    "فقيه مالكي.",
+    "من أهل مصر. كان يلبس زي الجند."
+   ]
+  },
+  {
+   "source_id": "147313",
+   "title": "تحبير المختصر وهو الشرح الوسط لبهرام على مختصر خليل",
+   "title_latin": "Tahbir al-Mukhtasar, wa huwa al-Sharh al-Wasat li-Bahram 'ala Mukhtasar Khalil",
+   "authors": [
+    {
+     "name": "بهرام الدميري",
+     "death_hijri": 805,
+     "main": true
+    }
+   ],
+   "author_latin": "Bahram al-Damiri",
+   "main_author_death_hijri": 805,
+   "publisher": "مركز نجيبويه للمخطوطات وخدمة التراث",
+   "edition": "الأولى، ١٤٣٤ هـ - ٢٠١٣ م",
+   "volumes": 5,
+   "indexed_pages": 3334,
+   "indexed_passages": 3360,
+   "author_bio": [
+    "بهرام الدَّمِيري (٧٣٤ - ٨٠٥ هـ = ١٣٣٤ - ١٤٠٢ م)",
+    "بهرام بن عبد الله بن عبد العزيز، أبو البقاء، تاج الدين السلمي الدميري القاهري:",
+    "فقيه انتهت إليه رياسة المالكية في زمنه. مصري نسبته إلى (ميرة) قرية قرب دمياط.",
+    "أفتى ودرس وناب في القضاء بمصر، واستقل به سنة ٧٩١ - ٧٩٢ وتوجه مع القضاة الى الشام لحرب الظاهر، وعاد الظاهر، فعزله بعد أن طعن في صدره وشدقه."
+   ]
+  },
+  {
+   "source_id": "021611",
+   "title": "التاج والإكليل لمختصر خليل",
+   "title_latin": "al-Taj wa-l-Iklil li-Mukhtasar Khalil",
+   "authors": [
+    {
+     "name": "محمد بن يوسف المواق",
+     "death_hijri": 897,
+     "main": true
+    }
+   ],
+   "author_latin": "Muhammad ibn Yusuf al-Mawwaq",
+   "main_author_death_hijri": 897,
+   "publisher": "دار الكتب العلمية",
+   "edition": "الأولى، ١٤١٦هـ-١٩٩٤م",
+   "volumes": 8,
+   "indexed_pages": 3713,
+   "indexed_passages": 5369,
+   "author_bio": [
+    "المواق ( ٠٠٠ - ٨٩٧ هـ = ٠٠٠ - ١٤٩٢ م)",
+    "محمد بن يوسف بن أبي القاسم بن يوسف العبدري الغرناطي، أبو عبد الله المواق: فقيه مالكي: كان عالم غرناطة وإمامها وصالحها في وقته.",
+    "له (التاج والاكليل - ط) في شرح مختصر خليل، فقه، و (سنن المهتدين في مقامات الدين - ط)",
+    "نقلا عن : الأعلام للزركلي"
+   ]
+  },
+  {
+   "source_id": "014556",
+   "title": "شرح زروق على متن الرسالة",
+   "title_latin": "Sharh Zarruq 'ala Matn al-Risalah",
+   "authors": [
+    {
+     "name": "زروق",
+     "death_hijri": 899,
+     "main": true
+    }
+   ],
+   "author_latin": "Zarruq",
+   "main_author_death_hijri": 899,
+   "publisher": "دار الكتب العلمية، بيروت - لبنان",
+   "edition": "الأولى، ١٤٢٧ هـ - ٢٠٠٦ م",
+   "volumes": 2,
+   "indexed_pages": 1073,
+   "indexed_passages": 1102,
+   "author_bio": [
+    "زروق (٨٤٦ - ٨٩٩ هـ = ١٤٤٢ - ١٤٩٣ م)",
+    "أحمد بن أحمد بن محمد بن عيسى البرنسي الفاسي، أبو العباس، زروق: فقيه محدث صوفي.",
+    "من أهل فاس (بالمغرب) تفقه في بلده وقرأ بمصر والمدينة، وغلب عليه التصوف فتجرد وساح، وتوفي في تكرين (من قرى مسراتة، من أعمال طرابلس الغرب) له تصانيف كثيرة يميل فيها إلى الاختصار مع التحرير، وانفرد بجودة التصنيف في التصوف.",
+    "من كتبه (شرح مختصر خليل) في فقه المالكية، و (النصيحة الكافية لمن خصه الله بالعافية - ط) و (القواعد - ط) في التصوف، و (إعانة المتوجه المسكين، على طريق الفتح والتمكين - خ) اقتنيت نسخة منه كتبت سنة ٩٦٩ وله عدة شروح للحكم العطائية، منها (شرح - خ) في خزانة الرباط (٤٠١ جلا) و (الحوادث والبدع - خ) رسالة، في أول المجموعة (١١٥٧ كت) في خزانة الرباط و (الجنة، للمعتصم من البدع بالسنة) و (البدع التي يفعلها فقراء الصوفية) مئة فصل. و (الكناشة) و (رحلة) و (شرح رسالة أبي زيد القيرواني - ط) فقه وللشيخ عبد الرحمن بن محمد بن عبد الله ابن محمد بن أبي بكر العياشي، كتاب (الأنوار السنية على الوظيفة الزروقية - خ) وقعت لي منه نسخة مغربية متقنة، عرف فيها زروقا بأبي العباس (أحمد بن محمد ابن عيسى البرنوسي الفاسي الشاذلي) نسبه إلى جده، باختصار أبيه أحمد."
+   ]
+  },
+  {
+   "source_id": "000569",
+   "title": "مواهب الجليل في شرح مختصر خليل",
+   "title_latin": "Mawahib al-Jalil fi Sharh Mukhtasar Khalil",
+   "authors": [
+    {
+     "name": "الحطاب",
+     "death_hijri": 954,
+     "main": true
+    }
+   ],
+   "author_latin": "al-Hattab",
+   "main_author_death_hijri": 954,
+   "publisher": "دار الفكر",
+   "edition": "الثالثة، ١٤١٢هـ - ١٩٩٢م",
+   "volumes": 6,
+   "indexed_pages": 3087,
+   "indexed_passages": 9588,
+   "author_bio": [
+    "الحطاب (٩٠٢ - ٩٥٤ هـ = ١٤٩٧ - ١٥٤٧ م)",
+    "شمس الدين، أبو عبد الله، محمد بن محمد بن عبد الرحمن الطرابلسي المغربي، المعروف بالحطاب الرُّعيني المالكي:",
+    "فقيه مالكي، من علماء المتصوفين.",
+    "أصله من المغرب، ولد واشتهر بمكة، ومات في طرابلس الغرب."
+   ]
+  },
+  {
+   "source_id": "014297",
+   "title": "شرح الزرقاني على مختصر خليل وحاشية البناني",
+   "title_latin": "Sharh al-Zurqani 'ala Mukhtasar Khalil wa Hashiyat al-Bannani",
+   "authors": [
+    {
+     "name": "الزرقاني، عبد الباقي",
+     "death_hijri": 1099,
+     "main": true
+    }
+   ],
+   "author_latin": "al-Zurqani, 'Abd al-Baqi",
+   "main_author_death_hijri": 1099,
+   "publisher": "دار الكتب العلمية، بيروت - لبنان",
+   "edition": "الأولى، ١٤٢٢ هـ - ٢٠٠٢ م",
+   "volumes": 8,
+   "indexed_pages": 3857,
+   "indexed_passages": 7639,
+   "author_bio": [
+    "الزُّرْقاني (١٠٢٠ - ١٠٩٩ هـ = ١٦١١ - ١٦٨٨ م)",
+    "فقيه مالكي، ولد ومات بمصر. من كتبه (شرح مختصر سيدي خليل - ط) فقه، أربعة أجزاء [ثم طُبع]، و (شرح العزية - خ) ورسالة في (الكلام على إذا - خ)",
+    "نقلا عن: «الأعلام» للزركلي"
+   ]
+  },
+  {
+   "source_id": "000091",
+   "title": "شرح الخرشي على مختصر خليل - ومعه حاشية العدوي",
+   "title_latin": "Sharh al-Kharashi 'ala Mukhtasar Khalil - wa ma'ahu Hashiyat al-'Adawi",
+   "authors": [
+    {
+     "name": "الخرشي = الخراشي",
+     "death_hijri": 1101,
+     "main": true
+    },
+    {
+     "name": "العدوي",
+     "death_hijri": 1189,
+     "main": false
+    }
+   ],
+   "author_latin": "al-Kharashi; al-'Adawi",
+   "main_author_death_hijri": 1101,
+   "publisher": "المطبعة الكبرى الأميرية ببولاق مصر",
+   "edition": "الثانية، ١٣١٧ هـ",
+   "volumes": 8,
+   "indexed_pages": 2292,
+   "indexed_passages": 11429,
+   "author_bio": [
+    "الخرشي = الخَرَاشي (١٠١٠ - ١١٠١ هـ = ١٦٠١ - ١٦٩٠ م)",
+    "محمد بن عبد الله الخراشي المالكي، أبو عبد الله",
+    "نسبته إلى قرية (أبو خراش) كسَحَاب، من \"البحيرة\" بمصر، أو نسبته إلى (خِرشة) بكسر الخاء، من قُرى مصر أيضا، ولِذا يُقال له: (الِخرشي) بكسر الخاء، كما يُقال له: (الخَرَشي) بفتحتين؛ كما وُجِد بخطه.",
+    "كان فقيها مالكيا فاضلا ورعا."
+   ]
+  },
+  {
+   "source_id": "021589",
+   "title": "الفواكه الدواني على رسالة ابن أبي زيد القيرواني",
+   "title_latin": "al-Fawakih al-Dawani 'ala Risalat Ibn Abi Zayd al-Qayrawani",
+   "authors": [
+    {
+     "name": "النفراوي",
+     "death_hijri": 1126,
+     "main": true
+    }
+   ],
+   "author_latin": "al-Nafrawi",
+   "main_author_death_hijri": 1126,
+   "publisher": "دار الفكر",
+   "edition": "بدون طبعة",
+   "volumes": 2,
+   "indexed_pages": 778,
+   "indexed_passages": 3478,
+   "author_bio": [
+    "النفراوي (١٠٤٤ - ١١٢٦ هـ = ١٦٣٤ - ١٧١٤ م)",
+    "أحمد بن غانم (أو غنيم) بن سالم ابن مهنا، شهاب الدين النفراوي الأزهري المالكي: فقيه من بلدة نفري، من أعمال قويسنا، بمصر.",
+    "نشأ بها وتفقه وتأدب وتوفي بالقاهرة.",
+    "له كتب، منها (الفواكه الدواني - ط) ثلاثة أجزاء على رسالة ابن أبي زيد القيرواني، في فقه المالكية."
+   ]
+  },
+  {
+   "source_id": "021597",
+   "title": "حاشية العدوي على كفاية الطالب الرباني",
+   "title_latin": "Hashiyat al-'Adawi 'ala Kifayat al-Talib al-Rabbani",
+   "authors": [
+    {
+     "name": "العدوي",
+     "death_hijri": 1189,
+     "main": true
+    }
+   ],
+   "author_latin": "al-'Adawi",
+   "main_author_death_hijri": 1189,
+   "publisher": "دار الفكر - بيروت",
+   "edition": "بدون طبعة",
+   "volumes": 2,
+   "indexed_pages": 1110,
+   "indexed_passages": 4184,
+   "author_bio": [
+    "العَدَوي (١١١٢ - ١١٨٩ هـ = ١٧٠٠ - ١٧٧٥ م)",
+    "علي بن أحمد بن مكرم الصعيدي العدوي, أبو الحسن:",
+    "يلقب بالعدوي نسبة إلى قرية \"بَني عدي\" بالقرب من منفلوط؛ حيث ولد.",
+    "شيخ شيوخ فقهاء المالكية في عصره."
+   ]
+  },
+  {
+   "source_id": "021607",
+   "title": "حاشية الصاوي على الشرح الصغير = بلغة السالك لأقرب المسالك",
+   "title_latin": "Hashiyat al-Sawi 'ala al-Sharh al-Saghir = Bulghat al-Salik li-Aqrab al-Masalik",
+   "authors": [
+    {
+     "name": "أحمد الصاوي",
+     "death_hijri": 1241,
+     "main": true
+    }
+   ],
+   "author_latin": "Ahmad al-Sawi",
+   "main_author_death_hijri": 1241,
+   "publisher": "دار المعارف",
+   "edition": "بدون طبعة وبدون تاريخ",
+   "volumes": 4,
+   "indexed_pages": 2984,
+   "indexed_passages": 5779,
+   "author_bio": [
+    "أحمد الصَّاوي (١١٧٥ - ١٢٤١ هـ = ١٧٦١ - ١٨٢٥ م)",
+    "أحمد بن محمد الخلوتي، الشهير بالصاوي",
+    "فقيه مالكي، نسبته إلى (صاء الحجر) في إقليم الغربية، بمصر.",
+    "توفي بالمدينة المنورة."
+   ]
+  },
+  {
+   "source_id": "021614",
+   "title": "منح الجليل شرح مختصر خليل",
+   "title_latin": "Manh al-Jalil, Sharh Mukhtasar Khalil",
+   "authors": [
+    {
+     "name": "محمد بن أحمد عليش",
+     "death_hijri": 1299,
+     "main": true
+    }
+   ],
+   "author_latin": "Muhammad ibn Ahmad 'Illish",
+   "main_author_death_hijri": 1299,
+   "publisher": "دار الفكر - بيروت",
+   "edition": "الأولى،: ١٤٠٤ هـ - ١٩٨٤ م",
+   "volumes": 9,
+   "indexed_pages": 4919,
+   "indexed_passages": 9687,
+   "author_bio": [
+    "الشيخ عليش (١٢١٧ - ١٢٩٩ هـ = ١٨٠٢ - ١٨٨٢ م)",
+    "محمد بن أحمد بن محمد عليش، أبو عبد الله: فقيه، من أعيان المالكية.",
+    "مغربي الاصل، من أهل طرابلس الغرب.",
+    "ولد بالقاهرة وتعلم في الأزهر، وولي مشيخة المالكية فيه."
+   ]
+  },
+  {
+   "source_id": "007441",
+   "title": "الثمر الداني شرح رسالة ابن أبي زيد القيرواني",
+   "title_latin": "al-Thamar al-Dani, Sharh Risalat Ibn Abi Zayd al-Qayrawani",
+   "authors": [
+    {
+     "name": "صالح بن عبد السميع الأزهري",
+     "death_hijri": 1335,
+     "main": true
+    }
+   ],
+   "author_latin": "Salih ibn 'Abd al-Sami' al-Azhari",
+   "main_author_death_hijri": 1335,
+   "publisher": "المكتبة الثقافية - بيروت",
+   "edition": "",
+   "volumes": 1,
+   "indexed_pages": 751,
+   "indexed_passages": 751,
+   "author_bio": []
+  }
+ ]
+}
