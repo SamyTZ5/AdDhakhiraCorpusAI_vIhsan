@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass
 from typing import Iterable, List, Optional, Sequence
 
@@ -88,6 +89,11 @@ def get_embedding_adapter(model_name: str) -> EmbeddingAdapter:
     return EmbeddingAdapter(model_name=model_name)
 
 
+def embedding_device() -> str:
+    """GPU réservé au modèle de recherche (ex. « cuda:1 » sur Kaggle 2×T4), sinon vide."""
+    return os.environ.get("ADDHAKHIRA_EMBEDDING_DEVICE", "").strip()
+
+
 def _model_kwargs_for_this_gpu(single_device: bool = True) -> dict:
     """Réglages de chargement adaptés au GPU.
 
@@ -103,7 +109,7 @@ def _model_kwargs_for_this_gpu(single_device: bool = True) -> dict:
 
         if torch.cuda.is_available():
             if single_device:
-                kwargs["device_map"] = "cuda"
+                kwargs["device_map"] = embedding_device() or "cuda"
             if torch.cuda.get_device_capability()[0] < 8:
                 kwargs["dtype"] = torch.float16
         else:
@@ -139,7 +145,7 @@ class EmbeddingModel:
         self.devices = [d for d in (devices or []) if d]
         self.show_progress = show_progress
         _apply_transformers_compatibility_shims(model_name)
-        device = "cpu" if len(self.devices) > 1 else None
+        device = "cpu" if len(self.devices) > 1 else (embedding_device() or None)
         self.model = SentenceTransformer(
             model_name,
             cache_folder=cache_folder,

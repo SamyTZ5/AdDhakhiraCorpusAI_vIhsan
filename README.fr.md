@@ -319,3 +319,14 @@ Le suivi se fait dans l'onglet **Actions** du dépôt ; l'adresse `…modal.run`
 Autres possibilités : l'**Étape 4** du notebook Colab, ou la ligne de commande (`modal run modal_app.py::prepare_assets` une fois, puis `modal deploy modal_app.py`).
 
 Le dossier `hf_space/` permet un déploiement équivalent sur Hugging Face Spaces (Gradio), qui nécessite désormais un abonnement payant et utilise un index léger (`Qwen3-Embedding-0.6B`, voir l'Étape 3 du notebook).
+
+## 10) Lancer une session partagée sur Kaggle (gratuit, avec GPU)
+
+Le notebook `AdDhakhira_Kaggle.ipynb` lance l'outil dans une session Kaggle gratuite (2 GPU T4, environ 30 heures par semaine, sans carte bancaire) et le partage par un lien public `…gradio.live`, protégé par identifiant et mot de passe.
+
+- Le modèle de recherche Qwen3-Embedding-4B reste chargé sur le second GPU.
+- Le **moteur local** Qwen2.5-7B tourne sur le premier : l'outil fonctionne même sans clé API.
+- Les comptes (`APP_USERS`) et les éventuelles clés API se déclarent dans les *Secrets* Kaggle.
+- Une session dure au plus 12 heures et le lien change à chaque session. En mode *Save & Run All*, elle tourne sans navigateur ouvert.
+
+Le mode d'emploi détaillé est en tête du notebook. Importation : sur kaggle.com, *Create → New Notebook*, puis *File → Import Notebook* et l'onglet *GitHub* avec l'adresse de ce dépôt.

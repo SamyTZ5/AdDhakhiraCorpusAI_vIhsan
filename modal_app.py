@@ -98,43 +98,9 @@ VECTOR_INDEX_BACKEND = "faiss"
     (CODE_DIR / "src" / "config.py").write_text(template + overrides, encoding="utf-8")
 
 
-def _preload(commit_volume=None) -> None:
-    """Prépare tout en arrière-plan ; l'interface lit l'avancement dans runtime_status."""
-    from src import runtime_status
-
-    try:
-        runtime_status.set_state("loading", "Vérification du modèle et de l'index")
-        if ensure_assets() and commit_volume is not None:
-            commit_volume()
-
-        from src import config
-        from src.data_loader import load_chunks
-        from src.embeddings import load_shared_embedding_model
-
-        runtime_status.set_state("loading", "Préparation des 18 livres")
-        log("Chargement du corpus…")
-        load_chunks(str(config.JSON_INPUT_PATH))
-        runtime_status.set_state("loading", "Chargement du modèle de recherche (environ 16 Go)")
-        log("Chargement du modèle de recherche…")
-        load_shared_embedding_model(config.EMBEDDING_MODEL)
-        runtime_status.set_state("ready")
-        log("Outil prêt.")
-    except Exception as exc:  # l'erreur est affichée aux visiteurs par le bandeau
-        import traceback
-
-        traceback.print_exc()
-        runtime_status.set_state("error", str(exc))
-
-
 def create_web_app(commit_volume=None, background: bool = True):
-    """Construit l'application web (FastAPI + Gradio).
-
-    La page est servie immédiatement ; le corpus et le modèle se chargent en
-    arrière-plan (background=True) pour que les visiteurs voient tout de suite
-    un bandeau explicatif plutôt qu'une page blanche.
-    """
-    import threading
-
+    """Construit l'application web (voir src/server.py). La page est servie
+    immédiatement ; modèle, index et corpus se préparent en arrière-plan."""
     os.environ.setdefault("GEMINI_MODEL", GEMINI_MODEL)
     os.environ.setdefault("ADDHAKHIRA_HOSTING", "modal_cpu")
     if not os.environ.get("GEMINI_API_KEY"):
@@ -143,43 +109,13 @@ def create_web_app(commit_volume=None, background: bool = True):
     _use_code_dir()
     write_config()
 
-    from src import runtime_status
+    def before_preload():
+        if ensure_assets() and commit_volume is not None:
+            commit_volume()
 
-    runtime_status.set_state("loading", "Démarrage")
-    if background:
-        threading.Thread(target=_preload, args=(commit_volume,), daemon=True).start()
-    else:
-        _preload(commit_volume)
+    from src.server import build_app
 
-    import gradio as gr
-    from fastapi import FastAPI
-
-    from src import ihsan_theme, web_app
-
-    demo = web_app.build_demo()
-    demo.queue(default_concurrency_limit=1)
-    fastapi_app = FastAPI()
-    # Comptes : secret APP_USERS, une ligne « identifiant:motdepasse » par personne.
-    # Compatibilité : un simple APP_PASSWORD crée le compte « equipe ».
-    from src.login_page import parse_users, protect
-
-    users = parse_users(os.environ.get("APP_USERS", ""))
-    if not users and os.environ.get("APP_PASSWORD", "").strip():
-        users = {"equipe": os.environ["APP_PASSWORD"].strip()}
-        log("Compte unique « equipe » créé à partir de APP_PASSWORD (préférez APP_USERS).")
-    if users:
-        protect(fastapi_app, users)
-        log(f"Connexion requise : {len(users)} compte(s).")
-    else:
-        log("ATTENTION : ni APP_USERS ni APP_PASSWORD, l'outil est ouvert à tous.")
-    log("Interface servie (préchargement en cours).")
-    return gr.mount_gradio_app(
-        fastapi_app,
-        demo,
-        path="/",
-        allowed_paths=web_app._allowed_paths(),
-        **ihsan_theme.launch_kwargs(),
-    )
+    return build_app(before_preload=before_preload, background=background)
 
 
 if modal is not None:

@@ -162,7 +162,11 @@ def _build_final_report(
     open_models: List[object],
 ) -> str:
     uses_local_llm = LLM_BACKEND == "default"
-    if uses_local_llm:
+    # Sur une machine à deux GPU (Kaggle), le modèle de recherche a sa propre carte :
+    # il reste chargé, même quand un moteur local (vLLM) occupe l'autre.
+    dedicated_embedding_gpu = bool(os.environ.get("ADDHAKHIRA_EMBEDDING_DEVICE", "").strip())
+    keep_embedder = (not uses_local_llm) or dedicated_embedding_gpu
+    if not keep_embedder:
         # vLLM a besoin de tout le GPU : on libère un éventuel modèle d'embedding
         # gardé en mémoire par une question précédente posée en mode API.
         release_shared_embedding_models()
@@ -220,7 +224,7 @@ def _build_final_report(
     retriever = HybridRetriever(
         chunks,
         embedding_model_name=EMBEDDING_MODEL,
-        keep_embedder_loaded=not uses_local_llm,
+        keep_embedder_loaded=keep_embedder,
     )
     try:
         top_chunks = retriever.search(processing_question, keywords, top_k=TOP_K_CHUNKS)
