@@ -135,7 +135,6 @@ def create_web_app(commit_volume=None, background: bool = True):
     """
     import threading
 
-    os.environ.setdefault("ADDHAKHIRA_BACKENDS", "gemini_api")
     os.environ.setdefault("GEMINI_MODEL", GEMINI_MODEL)
     os.environ.setdefault("ADDHAKHIRA_HOSTING", "modal_cpu")
     if not os.environ.get("GEMINI_API_KEY"):
@@ -159,14 +158,25 @@ def create_web_app(commit_volume=None, background: bool = True):
 
     demo = web_app.build_demo()
     demo.queue(default_concurrency_limit=1)
-    password = os.environ.get("APP_PASSWORD", "").strip()
+    fastapi_app = FastAPI()
+    # Comptes : secret APP_USERS, une ligne « identifiant:motdepasse » par personne.
+    # Compatibilité : un simple APP_PASSWORD crée le compte « equipe ».
+    from src.login_page import parse_users, protect
+
+    users = parse_users(os.environ.get("APP_USERS", ""))
+    if not users and os.environ.get("APP_PASSWORD", "").strip():
+        users = {"equipe": os.environ["APP_PASSWORD"].strip()}
+        log("Compte unique « equipe » créé à partir de APP_PASSWORD (préférez APP_USERS).")
+    if users:
+        protect(fastapi_app, users)
+        log(f"Connexion requise : {len(users)} compte(s).")
+    else:
+        log("ATTENTION : ni APP_USERS ni APP_PASSWORD, l'outil est ouvert à tous.")
     log("Interface servie (préchargement en cours).")
     return gr.mount_gradio_app(
-        FastAPI(),
+        fastapi_app,
         demo,
         path="/",
-        auth=(lambda _user, given: given == password) if password else None,
-        auth_message="Ad-Dhakhira : saisissez n'importe quel identifiant et le mot de passe communiqué.",
         allowed_paths=web_app._allowed_paths(),
         **ihsan_theme.launch_kwargs(),
     )
@@ -199,7 +209,6 @@ if modal is not None:
         )
         .env(
             {
-                "ADDHAKHIRA_BACKENDS": "gemini_api",
                 "ADDHAKHIRA_HOSTING": "modal_cpu",
                 "HF_HOME": str(DATA_DIR / "hf_cache"),
                 "TOKENIZERS_PARALLELISM": "false",

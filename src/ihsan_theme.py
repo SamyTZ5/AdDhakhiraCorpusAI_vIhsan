@@ -685,6 +685,43 @@ def build_css() -> str:
   margin: 6px 0 4px;
 }}
 
+/* ---------- Compte connecté et paramètres ---------- */
+.ih-account-bar {{
+  display: flex;
+  justify-content: flex-end;
+  gap: 14px;
+  font-size: .9rem;
+  color: var(--ih-muted);
+  margin: 8px 2px 0;
+}}
+.ih-account-bar a {{
+  color: var(--ih-bordeaux);
+}}
+.ih-settings-title {{
+  font-family: var(--ih-display);
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--ih-bordeaux);
+  margin: 10px 12px 2px;
+}}
+.ih-settings-message {{
+  margin: 6px 0 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--ih-gold);
+  background: #FBF3E4;
+  color: var(--ih-ink);
+}}
+.ih-engine-state {{
+  font-weight: 600;
+  white-space: nowrap;
+}}
+.ih-engine-ok .ih-engine-state {{
+  color: #2F6B3A;
+}}
+.ih-engine-off .ih-engine-state {{
+  color: var(--ih-muted);
+}}
+
 /* ---------- Bandeau de réveil du serveur ---------- */
 .ih-runtime-banner {{
   display: flex;

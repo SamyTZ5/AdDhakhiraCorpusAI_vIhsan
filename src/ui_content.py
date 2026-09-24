@@ -225,6 +225,72 @@ def runtime_banner_html(status: Optional[Dict] = None) -> str:
     )
 
 
+def account_bar_html(username: str) -> str:
+    if not username:
+        return ""
+    return (
+        f'<div class="ih-account-bar">Connecté : <strong>{_e(username)}</strong>'
+        '<a href="/logout">Se déconnecter</a></div>'
+    )
+
+
+def settings_intro_html() -> str:
+    return """
+<article class="ih-doc ih-settings-intro">
+  <p class="ih-doc-lead">Utilisez vos propres clés pour choisir le modèle qui rédige les synthèses.</p>
+  <p>Ajoutez une clé et le moteur correspondant apparaît dans la liste de l'onglet « Rechercher ». Sans clé,
+  il n'est pas proposé. <strong>Vos clés restent dans ce navigateur</strong> : elles ne sont envoyées au
+  serveur que le temps d'une question, jamais enregistrées ni partagées. Le champ « Modèle » est facultatif.</p>
+</article>
+"""
+
+
+def engines_status_html(settings: Optional[Dict]) -> str:
+    from src import engines
+
+    rows = []
+    for engine_id in engines.ENGINE_ORDER:
+        if engine_id in engines.API_ENGINES:
+            info = engines.API_ENGINES[engine_id]
+            entry = engines.user_entry(engine_id, settings)
+            if entry["key"]:
+                state, detail = "ok", f"Votre clé · modèle {entry['model'] or engines.default_model(engine_id)}"
+            elif engines.server_key(engine_id) and engines._enabled_by_host(engine_id):
+                state, detail = "ok", f"Fourni par le serveur · modèle {engines.default_model(engine_id)}"
+            else:
+                state, detail = "off", "Ajoutez une clé ci-dessus pour l'activer."
+            name = info["label"]
+        else:
+            ok, reason = engines.local_status(engine_id)
+            state = "ok" if ok else "off"
+            detail = reason if ok else f"{reason} {engines.LOCAL_ENGINES[engine_id]['hint']}"
+            name = engines.LOCAL_ENGINES[engine_id]["label"]
+        mark = "Disponible" if state == "ok" else "Non proposé"
+        rows.append(
+            f'<tr class="ih-engine-{state}"><td>{_e(name)}</td><td><span class="ih-engine-state">{mark}</span></td>'
+            f"<td>{_e(detail)}</td></tr>"
+        )
+    return (
+        '<div class="ih-doc"><h3>Moteurs sur ce serveur</h3><div class="ih-table-wrap"><table class="ih-table">'
+        "<thead><tr><th>Moteur</th><th>État</th><th>Détail</th></tr></thead><tbody>"
+        + "".join(rows)
+        + "</tbody></table></div></div>"
+    )
+
+
+def settings_saved_html(settings: Optional[Dict], cleared: bool = False) -> str:
+    if cleared:
+        text = "Vos clés ont été effacées de ce navigateur."
+    else:
+        count = sum(1 for entry in (settings or {}).values() if entry.get("key"))
+        text = (
+            f"Enregistré dans ce navigateur : {count} clé{'s' if count > 1 else ''}. "
+            "La liste des moteurs de l'onglet « Rechercher » est à jour."
+            if count else "Enregistré. Aucune clé saisie : seuls les moteurs fournis par le serveur sont proposés."
+        )
+    return f'<p class="ih-settings-message" role="status">{_e(text)}</p>'
+
+
 def idle_progress_html() -> str:
     return progress_html("startup", "Choisissez un moteur, écrivez votre question, puis lancez la recherche.", state="idle")
 

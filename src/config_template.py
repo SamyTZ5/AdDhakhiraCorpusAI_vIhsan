@@ -15,6 +15,8 @@ ANTHROPIC_API_KEY = ""
 # For API backends, use API model IDs.
 MODEL_EXTRACTOR_PATH = "/path/to/extractor-model"
 MODEL_REASONER_PATH = "/path/to/reasoner-model"
+# Version légère locale (Qwen2.5-7B-Instruct-AWQ), proposée si le dossier existe.
+LITE_MODEL_PATH = "/path/to/lite-model"
 
 # === Paths ===
 REPO_ROOT = Path(__file__).resolve().parent.parent
