@@ -17,6 +17,9 @@ from src.config import (
 
 LOGGER = logging.getLogger(__name__)
 
+# Marge ajoutée à max_output_tokens pour la réflexion interne des modèles Gemini.
+GEMINI_THINKING_HEADROOM_TOKENS = 8192
+
 
 class JSONGenerationError(RuntimeError):
     """Expose failed JSON generation details to the optional HTML diagnostic."""
@@ -36,6 +39,119 @@ class JSONGenerationError(RuntimeError):
         self.raw_response = raw_response
         self.cause_type = type(cause).__name__ if cause is not None else None
         self.cause_message = str(cause) if cause is not None else None
+
+
+class ProviderFatalError(RuntimeError):
+    """Erreur de fournisseur qu'il est inutile de réessayer (clé, quota, modèle).
+
+    Le message est rédigé pour être affiché tel quel dans l'interface.
+    """
+
+
+def _status_code(exc: BaseException) -> Optional[int]:
+    for attr in ("status_code", "code", "status"):
+        value = getattr(exc, attr, None)
+        if isinstance(value, int):
+            return value
+    response = getattr(exc, "response", None)
+    value = getattr(response, "status_code", None)
+    return value if isinstance(value, int) else None
+
+
+def _classify_provider_error(exc: BaseException) -> str:
+    message = str(exc).lower()
+    code = _status_code(exc)
+    if (
+        code in (401, 403)
+        or "api key not valid" in message
+        or "api_key_invalid" in message
+        or "incorrect api key" in message
+        or "invalid x-api-key" in message
+        or "invalid api key" in message
+    ):
+        return "auth"
+    if "credit balance" in message or "insufficient_quota" in message or "billing" in message:
+        return "billing"
+    if code == 404:
+        return "not_found"
+    if code == 429 or "resource_exhausted" in message or "rate limit" in message or "rate_limit" in message:
+        if "perday" in message or "per day" in message or "per_day" in message:
+            return "daily_quota"
+        return "transient"
+    if code in (500, 502, 503, 504, 529) or any(
+        marker in message
+        for marker in ("overloaded", "unavailable", "timed out", "timeout", "connection error", "temporarily")
+    ):
+        return "transient"
+    return "other"
+
+
+def _retry_delay_seconds(exc: BaseException, attempt: int) -> float:
+    message = str(exc)
+    match = re.search(r"retry in ([0-9.]+)\s*s", message, flags=re.IGNORECASE) or re.search(
+        r"retryDelay['\"]?\s*[:=]\s*['\"]?([0-9.]+)s", message
+    )
+    if match:
+        try:
+            return min(65.0, max(2.0, float(match.group(1)) + 1.0))
+        except ValueError:
+            pass
+    return float(min(60, 5 * (2 ** attempt)))
+
+
+PROVIDER_MAX_ATTEMPTS = 5
+
+
+def call_provider(provider: str, request):
+    """Appelle l'API d'un fournisseur en réessayant les erreurs passagères.
+
+    Limites par minute, surcharge et coupures réseau sont réessayées avec une
+    attente croissante. Clé refusée, quota journalier épuisé ou modèle inconnu
+    lèvent directement une ProviderFatalError avec un message clair.
+    """
+    import time
+
+    for attempt in range(PROVIDER_MAX_ATTEMPTS):
+        try:
+            return request()
+        except ProviderFatalError:
+            raise
+        except Exception as exc:
+            kind = _classify_provider_error(exc)
+            if kind == "auth":
+                raise ProviderFatalError(
+                    f"Clé API {provider} refusée. Vérifiez qu'elle est complète, sans espace, et toujours active."
+                ) from exc
+            if kind == "billing":
+                raise ProviderFatalError(
+                    f"Le compte {provider} n'a pas de crédit ou de facturation active pour cette clé."
+                ) from exc
+            if kind == "not_found":
+                raise ProviderFatalError(
+                    f"Modèle {provider} introuvable. Vérifiez le nom exact du modèle dans le champ prévu."
+                ) from exc
+            if kind == "daily_quota":
+                raise ProviderFatalError(
+                    f"Quota journalier {provider} atteint pour ce modèle. Réessayez demain, "
+                    "ou choisissez un modèle avec plus de requêtes gratuites (par exemple un modèle « flash-lite »)."
+                ) from exc
+            if kind == "transient" and attempt < PROVIDER_MAX_ATTEMPTS - 1:
+                delay = _retry_delay_seconds(exc, attempt)
+                LOGGER.warning(
+                    "%s temporairement indisponible ou limité (tentative %s/%s), nouvel essai dans %.0f s : %s",
+                    provider,
+                    attempt + 1,
+                    PROVIDER_MAX_ATTEMPTS,
+                    delay,
+                    exc,
+                )
+                time.sleep(delay)
+                continue
+            if kind == "transient":
+                raise ProviderFatalError(
+                    f"{provider} limite le nombre de requêtes ou est surchargé. Attendez une minute puis relancez la question."
+                ) from exc
+            raise
 
 
 @contextmanager
@@ -157,7 +273,13 @@ class CustomBackend(LLMBackend):
             local_files_only=True,
             trust_remote_code=True,
         )
-        model_dtype = "float16" if "awq" in model_path.lower() else "bfloat16"
+        # bfloat16 n'existe qu'à partir des GPU Ampere (A100, L4…). Un T4 de Colab
+        # gratuit doit passer en float16, sinon vLLM refuse de démarrer.
+        supports_bf16 = torch.cuda.is_available() and torch.cuda.get_device_capability()[0] >= 8
+        if "awq" in model_path.lower() or not supports_bf16:
+            model_dtype = "float16"
+        else:
+            model_dtype = "bfloat16"
         max_num_batched_tokens = (
             int(VLLM_MAX_NUM_BATCHED_TOKENS)
             if VLLM_MAX_NUM_BATCHED_TOKENS is not None
@@ -344,25 +466,33 @@ class GeminiBackend(LLMBackend):
         response_schema: Optional[Dict] = None,
     ) -> str:
         parts = self._messages_to_parts(messages)
+        # Sur les modèles Gemini récents, la réflexion interne est décomptée de
+        # max_output_tokens : sans marge, la réponse JSON arrive vide ou tronquée.
         config = {
-            "temperature": float(temperature),
-            "top_p": float(top_p),
-            "max_output_tokens": int(max(16, max_tokens)),
+            "max_output_tokens": int(max(16, max_tokens)) + GEMINI_THINKING_HEADROOM_TOKENS,
         }
+        # Google déconseille de modifier temperature/top_p à partir de Gemini 3.
+        if not self.model_name.lower().startswith("gemini-3"):
+            config["temperature"] = float(temperature)
+            config["top_p"] = float(top_p)
         if parts["system"]:
             config["system_instruction"] = parts["system"]
         if response_schema is not None:
             config["response_mime_type"] = "application/json"
             config["response_json_schema"] = response_schema
 
-        response = self.client.models.generate_content(
-            model=self.model_name,
-            contents=parts["user"],
-            config=config,
-        )
-        if not response.text:
-            raise RuntimeError("Gemini SDK returned an empty text response.")
-        return response.text.strip()
+        def request():
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=parts["user"],
+                config=config,
+            )
+            text = getattr(response, "text", None)
+            if not text:
+                raise RuntimeError("Gemini SDK returned an empty text response.")
+            return text.strip()
+
+        return call_provider("Gemini", request)
 
     def generate_json(
         self,
@@ -391,6 +521,8 @@ class GeminiBackend(LLMBackend):
                     response_schema=schema,
                 )
                 last_raw = raw
+            except ProviderFatalError:
+                raise
             except Exception as exc:
                 raise JSONGenerationError(
                     f"Gemini request failed during JSON generation: {exc}",
@@ -475,15 +607,30 @@ class OpenAIBackend(LLMBackend):
             "messages": messages,
             "temperature": float(temperature),
             "top_p": float(top_p),
-            "max_tokens": int(max(16, max_tokens)),
+            # max_completion_tokens remplace max_tokens et fonctionne avec tous les modèles actuels.
+            "max_completion_tokens": int(max(16, max_tokens)),
         }
         if response_format:
             params["response_format"] = response_format
-        completion = self.client.chat.completions.create(**params)
-        content = completion.choices[0].message.content
-        if not content:
-            raise RuntimeError("OpenAI SDK returned an empty text response.")
-        return content.strip()
+
+        def request():
+            try:
+                completion = self.client.chat.completions.create(**params)
+            except Exception as exc:
+                # Les modèles de raisonnement (o-series, gpt-5…) refusent temperature/top_p.
+                message = str(exc).lower()
+                if _status_code(exc) == 400 and ("temperature" in message or "top_p" in message):
+                    params.pop("temperature", None)
+                    params.pop("top_p", None)
+                    completion = self.client.chat.completions.create(**params)
+                else:
+                    raise
+            content = completion.choices[0].message.content
+            if not content:
+                raise RuntimeError("OpenAI SDK returned an empty text response.")
+            return content.strip()
+
+        return call_provider("OpenAI", request)
 
     def generate_json(
         self,
@@ -520,6 +667,8 @@ class OpenAIBackend(LLMBackend):
                     response_format={"type": "json_object"},
                 )
                 last_raw = raw
+            except ProviderFatalError:
+                raise
             except Exception as exc:
                 raise JSONGenerationError(
                     f"OpenAI request failed during JSON generation: {exc}",
@@ -617,24 +766,29 @@ class AnthropicBackend(LLMBackend):
         top_p: float,
     ) -> str:
         parts = self._split_messages(messages)
+        # Les modèles Claude récents refusent temperature et top_p ensemble :
+        # seule la température est transmise.
         params = {
             "model": self.model_name,
             "messages": parts["messages"],
             "max_tokens": int(max(16, max_tokens)),
             "temperature": float(temperature),
-            "top_p": float(top_p),
         }
         if parts["system"]:
             params["system"] = parts["system"]
-        message = self.client.messages.create(**params)
-        text = "".join(
-            block.text
-            for block in message.content
-            if getattr(block, "type", None) == "text"
-        ).strip()
-        if not text:
-            raise RuntimeError("Anthropic SDK returned an empty text response.")
-        return text
+
+        def request():
+            message = self.client.messages.create(**params)
+            text = "".join(
+                block.text
+                for block in message.content
+                if getattr(block, "type", None) == "text"
+            ).strip()
+            if not text:
+                raise RuntimeError("Anthropic SDK returned an empty text response.")
+            return text
+
+        return call_provider("Anthropic", request)
 
     def generate_json(
         self,
@@ -670,6 +824,8 @@ class AnthropicBackend(LLMBackend):
                     top_p=top_p,
                 )
                 last_raw = raw
+            except ProviderFatalError:
+                raise
             except Exception as exc:
                 raise JSONGenerationError(
                     f"Anthropic request failed during JSON generation: {exc}",

@@ -8,6 +8,8 @@
 
 # AdDhakhiraCorpusAI
 
+> This version is a fork of [AdDhakhiraCorpusAI](https://github.com/git-haddadz/AdDhakhiraCorpusAI), with a redesigned interface and robustness fixes (see section 8).
+
 ## 1) Why is the repository named `AdDhakhiraCorpusAI`?
 
 The name has two intentions:
@@ -96,8 +98,8 @@ All model IDs are configurable in the notebook and in `src/config.py`. For local
 1. Clone the repository
 
 ```bash
-git clone https://github.com/git-haddadz/AdDhakhiraCorpusAI.git
-cd AdDhakhiraCorpusAI
+git clone https://github.com/SamyTZ5/AdDhakhiraCorpusAI_vIhsan.git
+cd AdDhakhiraCorpusAI_vIhsan
 ```
 
 2. Build and start the Docker environment
@@ -249,7 +251,7 @@ The interface reads the local model paths and default settings from `src/config.
 
 For Google Colab usage, run the web app notebook:
 
-- Google Colab: [AdDhakhira_WebApp.ipynb](https://colab.research.google.com/github/git-haddadz/AdDhakhiraCorpusAI/blob/main/AdDhakhira_WebApp.ipynb)
+- Google Colab: [AdDhakhira_WebApp.ipynb](https://colab.research.google.com/github/SamyTZ5/AdDhakhiraCorpusAI_vIhsan/blob/main/AdDhakhira_WebApp.ipynb)
 
 The notebook exposes a dropdown for:
 
@@ -268,3 +270,32 @@ You can edit the model fields in the notebook before initialization if you want 
 Yes.
 
 The project is open-source and designed to be forked, improved, and adapted, as long as derivative use remains free and open-source. Adapting the tool to a corpus from another madhhab is explicitly encouraged.
+
+## 8) Troubleshooting
+
+**On Colab, after changing the code on GitHub**: run **Runtime → Run all** again. Step 1 aligns the Drive copy with GitHub (the `Version du code :` line shows the commit in use) and reloads the code. A session restart is only needed after installing dependencies, and the notebook says so itself.
+
+**Which Gemini model with a free key?** One question triggers several calls (keywords, answer, two consistency checks, sometimes one or two corrections). The default `gemini-3.5-flash-lite` has far more free requests per day than `gemini-3.5-flash`. Your account's actual limits are shown in Google AI Studio.
+
+**Common error messages**
+
+| Message | Cause | What to do |
+|---|---|---|
+| `Clé API … refusée` | Incomplete, padded or revoked key | Copy the key again from AI Studio (or the provider console) |
+| `Quota journalier … atteint` | The model's free daily limit is used up | Try again tomorrow or switch to a "flash-lite" model |
+| `… limite le nombre de requêtes ou est surchargé` | Too many requests per minute, despite automatic retries | Wait a minute and try again |
+| `Modèle … introuvable` | Wrong model name | Check the exact name in the provider's documentation |
+| `Vector index mismatch for chunks_sha256` | The `database/` folder changed since the index was built | Delete the `vector_indexes` folder on Drive and rerun Step 1 |
+| `La commande a échoué` during installation | A dependency failed to install | Read the last lines printed just above: they show the cause |
+
+**Fixes in this version**
+
+- Python 3.13 (Colab) compatibility: updated `sentencepiece` and `tiktoken` versions.
+- The prebuilt index is no longer rejected because the model path is written differently (for example with a trailing `/`).
+- Code pulled from GitHub is reloaded on every Step 1 run, and the Drive copy is aligned exactly with the remote branch.
+- Installation command errors are shown in Colab.
+- API calls: automatic retries on per-minute limits and overload, clear messages for rejected keys or exhausted quotas, headroom for the internal reasoning of recent Gemini models, parameters suited to current OpenAI and Claude models.
+- T4 GPU (free Colab): the embedding model and vLLM switch to `float16` automatically.
+- In API mode, the embedding model stays loaded between questions.
+- Models are always released after a question, even on errors.
+- Citations also carry the book identifier, so a passage is never attributed to the wrong book when two books share page numbers.

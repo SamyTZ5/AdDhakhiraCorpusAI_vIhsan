@@ -88,6 +88,23 @@ def get_embedding_adapter(model_name: str) -> EmbeddingAdapter:
     return EmbeddingAdapter(model_name=model_name)
 
 
+def _model_kwargs_for_this_gpu() -> dict:
+    """Choisit une précision adaptée au GPU.
+
+    Qwen3-Embedding-4B est publié en bfloat16, que les GPU antérieurs à Ampere
+    (dont le T4 de Colab gratuit) ne gèrent pas nativement : on passe alors en
+    float16, qui tient aussi dans les 15 Go du T4.
+    """
+    try:
+        import torch
+
+        if torch.cuda.is_available() and torch.cuda.get_device_capability()[0] < 8:
+            return {"dtype": torch.float16}
+    except Exception:
+        pass
+    return {}
+
+
 def normalize_vectors(vectors: np.ndarray) -> np.ndarray:
     arr = np.asarray(vectors, dtype=np.float32)
     if arr.ndim == 1:
@@ -118,6 +135,7 @@ class EmbeddingModel:
             cache_folder=cache_folder,
             trust_remote_code=True,
             device=device,
+            model_kwargs=_model_kwargs_for_this_gpu(),
         )
 
     def encode_chunks(self, texts: Iterable[str], batch_size: int = 32) -> np.ndarray:
@@ -165,3 +183,21 @@ class EmbeddingModel:
                 torch.cuda.ipc_collect()
         except Exception:
             pass
+
+
+# Modèles d'embedding gardés en mémoire entre deux questions (mode API).
+_SHARED_MODELS = {}
+
+
+def load_shared_embedding_model(model_name: str) -> "EmbeddingModel":
+    model = _SHARED_MODELS.get(model_name)
+    if model is None:
+        model = EmbeddingModel(model_name)
+        _SHARED_MODELS[model_name] = model
+    return model
+
+
+def release_shared_embedding_models() -> None:
+    while _SHARED_MODELS:
+        _, model = _SHARED_MODELS.popitem()
+        model.close()

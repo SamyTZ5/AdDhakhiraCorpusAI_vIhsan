@@ -149,7 +149,8 @@ def _parse_source_refs(source_text: str) -> List[Dict[str, str]]:
         return []
     normalized = _normalize_digits(source_text)
     page_pattern = re.compile(
-        r"Page\s*([0-9]+)\s*[\(\[]\s*page_id\s*=\s*([^\)\]\s,;]+)\s*[\)\]]",
+        r"Page\s*([0-9]+)\s*[\(\[]\s*page_id\s*=\s*([^\)\]\s,;]+)\s*"
+        r"(?:[,;]\s*source\s*=\s*([^\)\]\s,;]+)\s*)?[\)\]]",
         flags=re.IGNORECASE,
     )
     kv_pattern = re.compile(
@@ -157,8 +158,10 @@ def _parse_source_refs(source_text: str) -> List[Dict[str, str]]:
         flags=re.IGNORECASE,
     )
     refs = []
-    for page_number, page_id in page_pattern.findall(normalized):
-        refs.append({"page_number": page_number.strip(), "page_id": page_id.strip()})
+    for page_number, page_id, source_id in page_pattern.findall(normalized):
+        refs.append(
+            {"page_number": page_number.strip(), "page_id": page_id.strip(), "source_id": source_id.strip()}
+        )
     for page_number, page_id in kv_pattern.findall(normalized):
         refs.append({"page_number": page_number.strip(), "page_id": page_id.strip()})
     return refs
@@ -172,6 +175,11 @@ def _resolve_ref(
     page_number = _normalize_digits(str(ref.get("page_number", "")).strip())
     page_id = _normalize_digits(str(ref.get("page_id", "")).strip())
 
+    source_id = _normalize_digits(str(ref.get("source_id") or "").strip())
+    if source_id:
+        exact_with_source = by_pair.get(f"{source_id}|{page_number}|{page_id}")
+        if exact_with_source:
+            return exact_with_source
     exact = by_pair.get(f"{page_number}|{page_id}")
     if exact:
         return exact
@@ -209,7 +217,7 @@ def render_source_reference(source_text: str, source_page_map: Optional[Dict[str
     for ref in refs:
         page_number = ref["page_number"]
         page_id = ref["page_id"]
-        key = f"{page_number}|{page_id}"
+        key = f"{ref.get('source_id', '')}|{page_number}|{page_id}"
         if key in seen:
             continue
         seen.add(key)

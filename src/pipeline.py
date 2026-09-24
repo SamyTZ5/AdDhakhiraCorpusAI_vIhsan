@@ -9,6 +9,7 @@ from src.config import (
     AUTO_TRANSLATE_QUESTION_TO_ARABIC,
     EMBEDDING_MODEL,
     JSON_INPUT_PATH,
+    LLM_BACKEND,
     MAX_MODEL_LEN_EXTRACTOR,
     MIN_MODEL_LEN_REASONER,
     MODEL_EXTRACTOR_PATH,
@@ -20,6 +21,8 @@ from src.config import (
     TOP_K_SOURCES,
 )
 from src.data_loader import load_chunks
+from src.embeddings import release_shared_embedding_models
+from src.llm_backend import ProviderFatalError
 from src.llm_ops import (
     assess_answer_consistency,
     build_generation_debug_event,
@@ -40,6 +43,24 @@ def _emit_progress(progress_callback: Optional[ProgressCallback], message: str, 
     if progress_callback is None:
         return
     progress_callback({"message": message, **payload})
+
+
+def _close_quietly(model) -> None:
+    if model is None or not hasattr(model, "close"):
+        return
+    try:
+        model.close()
+    except Exception as exc:  # le nettoyage ne doit jamais masquer l'erreur d'origine
+        print(f"[pipeline] fermeture du modèle impossible : {exc}", flush=True)
+
+
+def _free_gpu_memory() -> None:
+    gc.collect()
+    try:
+        torch.cuda.empty_cache()
+        torch.cuda.ipc_collect()
+    except Exception:
+        pass
 
 
 def _estimate_token_count(text: str) -> int:
@@ -72,8 +93,7 @@ def build_reasoning_context(
             f"page_id={p['page_id']} part={p['part_index']}{extra}"
         )
         lines.append(f"{header}\n{p['text']}")
-        page_ref_key = f"{p.get('page_number')}|{p.get('page_id')}"
-        source_map[page_ref_key] = {
+        page_info = {
             "page_number": str(p.get("page_number")),
             "page_id": str(p.get("page_id")),
             "author": str(p.get("author", "Auteur inconnu")),
@@ -81,6 +101,10 @@ def build_reasoning_context(
             "section_path": str(p.get("section_path") or ""),
             "source_id": str(p.get("source_id") or ""),
         }
+        # Deux livres peuvent avoir le même couple page_number/page_id : la clé
+        # complète inclut la source pour ne pas attribuer une citation au mauvais livre.
+        source_map[f"{p.get('source_id')}|{p.get('page_number')}|{p.get('page_id')}"] = page_info
+        source_map.setdefault(f"{p.get('page_number')}|{p.get('page_id')}", page_info)
     joined = "\n\n".join(lines)
     return _truncate_text(joined, tokenizer, max_tokens), source_map
 
@@ -111,13 +135,45 @@ def build_final_report(
     auto_translate_question_to_arabic: bool = AUTO_TRANSLATE_QUESTION_TO_ARABIC,
     progress_callback: Optional[ProgressCallback] = None,
 ) -> str:
-    extractor_model = None
+    """Produit le rapport HTML. Les modèles ouverts sont toujours refermés,
+    même en cas d'erreur, pour que la question suivante ait un GPU libre."""
+    open_models: List[object] = []
+    try:
+        return _build_final_report(
+            question=question,
+            translate_to_french=translate_to_french,
+            diagnostic_coherence=diagnostic_coherence,
+            auto_translate_question_to_arabic=auto_translate_question_to_arabic,
+            progress_callback=progress_callback,
+            open_models=open_models,
+        )
+    finally:
+        while open_models:
+            _close_quietly(open_models.pop())
+        _free_gpu_memory()
+
+
+def _build_final_report(
+    question: str,
+    translate_to_french: bool,
+    diagnostic_coherence: bool,
+    auto_translate_question_to_arabic: bool,
+    progress_callback: Optional[ProgressCallback],
+    open_models: List[object],
+) -> str:
+    uses_local_llm = LLM_BACKEND == "default"
+    if uses_local_llm:
+        # vLLM a besoin de tout le GPU : on libère un éventuel modèle d'embedding
+        # gardé en mémoire par une question précédente posée en mode API.
+        release_shared_embedding_models()
+
     _emit_progress(progress_callback, "Initialisation des modèles de recherche...", stage="init")
     extractor_model, extractor_tokenizer = instantiate_model(
         model_path=MODEL_EXTRACTOR_PATH,
         num_gpus=NUM_GPUS_EXTRACTOR,
         max_model_len=MAX_MODEL_LEN_EXTRACTOR,
     )
+    open_models.append(extractor_model)
 
     processing_question = question
     translation_applied = False
@@ -148,15 +204,10 @@ def build_final_report(
         keywords=keywords,
     )
 
-    if hasattr(extractor_model, "close"):
-        extractor_model.close()
+    open_models.remove(extractor_model)
+    _close_quietly(extractor_model)
     del extractor_model
-    gc.collect()
-    torch.cuda.empty_cache()
-    try:
-        torch.cuda.ipc_collect()
-    except Exception:
-        pass
+    _free_gpu_memory()
 
     chunks, pages_by_key = load_chunks(JSON_INPUT_PATH)
     _emit_progress(
@@ -164,9 +215,17 @@ def build_final_report(
         "Je parcours l'index des textes et je compare les passages les plus proches.",
         stage="retrieval",
     )
-    retriever = HybridRetriever(chunks, embedding_model_name=EMBEDDING_MODEL)
-
-    top_chunks = retriever.search(processing_question, keywords, top_k=TOP_K_CHUNKS)
+    # En mode API, le GPU ne sert qu'à l'embedding : on le garde chargé entre les
+    # questions pour éviter de relire 8 Go depuis Google Drive à chaque fois.
+    retriever = HybridRetriever(
+        chunks,
+        embedding_model_name=EMBEDDING_MODEL,
+        keep_embedder_loaded=not uses_local_llm,
+    )
+    try:
+        top_chunks = retriever.search(processing_question, keywords, top_k=TOP_K_CHUNKS)
+    finally:
+        retriever.close()
     top_pages = top_pages_from_chunks(
         top_chunks,
         pages_by_key,
@@ -192,15 +251,8 @@ def build_final_report(
             stage="bibliography",
             top_pages=top_pages,
         )
-    if hasattr(retriever, "close"):
-        retriever.close()
     del retriever
-    gc.collect()
-    torch.cuda.empty_cache()
-    try:
-        torch.cuda.ipc_collect()
-    except Exception:
-        pass
+    _free_gpu_memory()
     if not top_pages:
         fallback = {
             "status": "not_enough_context",
@@ -255,6 +307,7 @@ def build_final_report(
         num_gpus=NUM_GPUS_REASONER,
         max_model_len=reasoner_model_len,
     )
+    open_models.append(reasoner_model)
 
     context, source_page_map = build_reasoning_context(
         top_pages,
@@ -321,6 +374,8 @@ def build_final_report(
                 build_generation_debug_event(stage, response=generated)
             )
             return generated, False
+        except ProviderFatalError:
+            raise
         except Exception as exc:
             llm_debug_events.append(
                 build_generation_debug_event(stage, error=exc)

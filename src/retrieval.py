@@ -12,7 +12,7 @@ from src.config import (
     HYBRID_LEXICAL_WEIGHT,
     VECTOR_INDEX_BACKEND,
 )
-from src.embeddings import EmbeddingModel
+from src.embeddings import EmbeddingModel, load_shared_embedding_model
 from src.models import PageDoc, TextChunk
 from src.text_utils import is_editorial_noise_page, normalize_arabic, tokenize_for_bm25
 from src.vector_index import load_compatible_index
@@ -30,8 +30,10 @@ class HybridRetriever:
         dense_top_k: int = DENSE_TOP_K,
         lexical_weight: float = HYBRID_LEXICAL_WEIGHT,
         dense_weight: float = HYBRID_DENSE_WEIGHT,
+        keep_embedder_loaded: bool = False,
     ):
         self.chunks = chunks
+        self.keep_embedder_loaded = bool(keep_embedder_loaded)
         self.bm25_corpus = [tokenize_for_bm25(c.normalized_lexical_text) for c in chunks]
         self.bm25 = BM25Okapi(self.bm25_corpus) if self.bm25_corpus else None
         self.embedding_model_name = embedding_model_name
@@ -58,11 +60,15 @@ class HybridRetriever:
             self.vector_backend,
             self.chunks,
         )
-        self.embedder = EmbeddingModel(self.embedding_model_name)
+        if self.keep_embedder_loaded:
+            self.embedder = load_shared_embedding_model(self.embedding_model_name)
+        else:
+            self.embedder = EmbeddingModel(self.embedding_model_name)
         self.dense_enabled = True
 
     def close(self) -> None:
-        if self.embedder is not None and hasattr(self.embedder, "close"):
+        # Un modèle partagé reste chargé pour la question suivante.
+        if self.embedder is not None and not self.keep_embedder_loaded and hasattr(self.embedder, "close"):
             self.embedder.close()
         self.embedder = None
         self.vector_index = None

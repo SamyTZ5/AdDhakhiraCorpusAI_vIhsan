@@ -8,6 +8,8 @@
 
 # AdDhakhiraCorpusAI
 
+> هذه النسخة تفرّعت عن مستودع [AdDhakhiraCorpusAI](https://github.com/git-haddadz/AdDhakhiraCorpusAI)، مع واجهة معاد تصميمها وتحسينات في الاستقرار.
+
 ## ١) لماذا سُمّي هذا المستودع `AdDhakhiraCorpusAI`؟
 
 للاسم مقصدان:
@@ -96,8 +98,8 @@
 1. استنساخ المستودع
 
 ```bash
-git clone https://github.com/git-haddadz/AdDhakhiraCorpusAI.git
-cd AdDhakhiraCorpusAI
+git clone https://github.com/SamyTZ5/AdDhakhiraCorpusAI_vIhsan.git
+cd AdDhakhiraCorpusAI_vIhsan
 ```
 
 2. بناء وتشغيل بيئة Docker
@@ -249,7 +251,7 @@ http://localhost:7860
 
 لاستعمال Google Colab، افتح notebook التطبيق:
 
-- Google Colab: [AdDhakhira_WebApp.ipynb](https://colab.research.google.com/github/git-haddadz/AdDhakhiraCorpusAI/blob/main/AdDhakhira_WebApp.ipynb)
+- Google Colab: [AdDhakhira_WebApp.ipynb](https://colab.research.google.com/github/SamyTZ5/AdDhakhiraCorpusAI_vIhsan/blob/main/AdDhakhira_WebApp.ipynb)
 
 يوفر notebook قائمة اختيار:
 

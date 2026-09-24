@@ -24,6 +24,7 @@ from src.llm_backend import (
     GeminiBackend,
     LLMBackend,
     OpenAIBackend,
+    ProviderFatalError,
     _extract_json_object,
 )
 from src.text_utils import ARABIC_WORD_RE
@@ -89,6 +90,8 @@ def _parse_jsonish(raw: str):
     for candidate in (text, f"{{{text}}}"):
         try:
             return _extract_json_object(candidate)
+        except ProviderFatalError:
+            raise
         except Exception:
             pass
     return None
@@ -291,6 +294,8 @@ Rules:
                     cycle=attempt + 1,
                 )
             )
+        except ProviderFatalError:
+            raise
         except Exception as exc:
             debug_events.append(
                 build_generation_debug_event(
@@ -316,6 +321,8 @@ Rules:
                     )
                 )
                 candidates = _coerce_keyword_candidates(raw)
+            except ProviderFatalError:
+                raise
             except Exception as exc:
                 debug_events.append(
                     build_generation_debug_event(
@@ -419,6 +426,8 @@ Rules:
         )
         translated = _coerce_translation(data, question)
         return translated or question
+    except ProviderFatalError:
+        raise
     except Exception:
         raw = model.generate_text(messages, max_tokens=220, temperature=0.0, top_p=1.0).strip()
         return _coerce_translation(raw, question)
@@ -467,9 +476,9 @@ Rules:
 - No external knowledge.
 - If at least one excerpt gives a directly applicable rule, set status=enough_context.
 - Use status=not_enough_context only when no applicable rule exists in the excerpts.
-- Each point must include a verbatim Arabic quote and a direct source reference like "Page 238 (page_id=237)", with no tags and no numeric index.
-- The source field must be formatted exactly as: "Page <number> (page_id=<id>)".
-- You must only cite page_number/page_id that exist in the provided [page_ref] headers.
+- Each point must include a verbatim Arabic quote and a direct source reference like "Page 238 (page_id=237, source=014297)", with no tags and no numeric index.
+- The source field must be formatted exactly as: "Page <number> (page_id=<id>, source=<source>)", copying page_number, page_id and source from the [page_ref] header of the quoted excerpt.
+- You must only cite page_number/page_id/source values that exist in the provided [page_ref] headers.
 - If you cannot map a quote to an existing [page_ref], do not use that quote.
 - Arabic quotes must never be truncated and must not contain ellipsis.
 - All non-quote fields must be French only.
@@ -523,6 +532,8 @@ Rules:
                 temperature=0.0,
                 top_p=1.0,
             )
+        except ProviderFatalError:
+            raise
         except Exception:
             pass
     return answer
@@ -588,6 +599,8 @@ Rules:
             temperature=0.0,
             top_p=1.0,
         )
+    except ProviderFatalError:
+        raise
     except Exception:
         return {
             "verdict": "insufficient",
@@ -638,6 +651,8 @@ Rules:
             )
             tr = (data.get("translation_fr") or "").strip()
             translations.append(tr if tr else "[Traduction indisponible]")
+        except ProviderFatalError:
+            raise
         except Exception:
             raw = model.generate_text(messages, max_tokens=max_tokens, temperature=0.0, top_p=1.0).strip()
             translations.append(raw if raw else "[Traduction indisponible]")

@@ -27,6 +27,32 @@ def model_slug(model_name: str) -> str:
     return slug.strip("._-") or "none"
 
 
+def _model_identities(model_name: str) -> set:
+    """Formes équivalentes d'une référence de modèle.
+
+    Un même modèle peut être désigné par son identifiant Hugging Face
+    ("Qwen/Qwen3-Embedding-4B") ou par un dossier local, avec ou sans "/"
+    final ("…/models/Qwen__Qwen3-Embedding-4B/"). Le chemin varie d'une
+    machine à l'autre ; le nom du modèle, lui, est stable.
+    """
+    ref = str(model_name or "").strip().rstrip("/\\")
+    if not ref:
+        return set()
+    base = ref.replace("\\", "/").split("/")[-1]
+    return {ref, base, ref.replace("/", "__"), base.split("__")[-1]}
+
+
+def same_embedding_model(left: str, right: str) -> bool:
+    return bool(_model_identities(left) & _model_identities(right))
+
+
+def signatures_compatible(existing: Dict, expected: Dict) -> bool:
+    strict_keys = ("index_version", "backend", "chunks_sha256", "chunk_count")
+    if any(existing.get(key) != expected.get(key) for key in strict_keys):
+        return False
+    return same_embedding_model(existing.get("embedding_model"), expected.get("embedding_model"))
+
+
 def index_dir_for(base_dir: Path, model_name: str, backend: str) -> Path:
     return Path(base_dir) / backend / model_slug(model_name)
 
@@ -157,9 +183,9 @@ class VectorIndex:
             found = self.signature.get(key)
             expected = expected_signature.get(key)
             if key == "embedding_model":
-                # Un même dossier peut être écrit avec ou sans "/" final.
-                found = str(found or "").rstrip("/")
-                expected = str(expected or "").rstrip("/")
+                # Le chemin du modèle dépend de la machine : on compare le modèle lui-même.
+                if same_embedding_model(found, expected):
+                    continue
             if found != expected:
                 raise ValueError(
                     f"Vector index mismatch for {key}: "
@@ -212,7 +238,7 @@ def build_and_save_index(
     sig_path = directory / "signature.json"
     if sig_path.exists() and not force:
         existing = json.loads(sig_path.read_text(encoding="utf-8"))
-        if all(existing.get(k) == signature.get(k) for k in ("index_version", "embedding_model", "backend", "chunks_sha256", "chunk_count")):
+        if signatures_compatible(existing, signature):
             log("compatible index already exists; skipping build")
             return directory
 

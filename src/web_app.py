@@ -36,17 +36,23 @@ BACKEND_DISPLAY_NAMES = {
     "anthropic_api": "Claude",
 }
 
+# gemini-3.5-flash-lite : bien plus de requêtes par jour sur l'offre gratuite
+# que gemini-3.5-flash, ce qui compte car une question déclenche plusieurs appels.
 DEFAULT_API_MODELS = {
-    "gemini_api": "gemini-3.5-flash",
+    "gemini_api": "gemini-3.5-flash-lite",
     "openai_api": "gpt-4.1",
-    "anthropic_api": "claude-sonnet-4-20250514",
+    "anthropic_api": "claude-sonnet-5",
 }
 
+# src.embeddings n'est volontairement pas rechargé : il garde le modèle
+# d'embedding en mémoire entre deux questions en mode API.
 PIPELINE_MODULE_PREFIXES = (
     "src.pipeline",
     "src.llm_ops",
     "src.llm_backend",
     "src.retrieval",
+    "src.vector_index",
+    "src.reporting",
 )
 
 _pipeline_lock = threading.Lock()

@@ -8,6 +8,8 @@
 
 # AdDhakhiraCorpusAI
 
+> Cette version est un fork de [AdDhakhiraCorpusAI](https://github.com/git-haddadz/AdDhakhiraCorpusAI), avec une interface redessinée et des corrections de robustesse (voir la section 8).
+
 ## 1) Pourquoi le dépôt s'appelle-t-il `AdDhakhiraCorpusAI` ?
 
 Le nom a deux intentions :
@@ -96,8 +98,8 @@ Tous les IDs de modèles sont configurables dans le notebook et dans `src/config
 1. Cloner le dépôt
 
 ```bash
-git clone https://github.com/git-haddadz/AdDhakhiraCorpusAI.git
-cd AdDhakhiraCorpusAI
+git clone https://github.com/SamyTZ5/AdDhakhiraCorpusAI_vIhsan.git
+cd AdDhakhiraCorpusAI_vIhsan
 ```
 
 2. Construire et démarrer l'environnement Docker
@@ -249,7 +251,7 @@ L'interface lit les chemins des modèles locaux et les paramètres par défaut d
 
 Pour Google Colab, utiliser le notebook web app :
 
-- Google Colab : [AdDhakhira_WebApp.ipynb](https://colab.research.google.com/github/git-haddadz/AdDhakhiraCorpusAI/blob/main/AdDhakhira_WebApp.ipynb)
+- Google Colab : [AdDhakhira_WebApp.ipynb](https://colab.research.google.com/github/SamyTZ5/AdDhakhiraCorpusAI_vIhsan/blob/main/AdDhakhira_WebApp.ipynb)
 
 Le notebook propose une liste déroulante :
 
@@ -268,3 +270,32 @@ Les champs modèles peuvent être modifiés dans le notebook avant l'initialisat
 Oui.
 
 Le projet est open-source et conçu pour être forké, amélioré et adapté, tant que les usages dérivés restent libres et open-source. Adapter l'outil à un corpus d'un autre madhhab est explicitement encouragé.
+
+## 8) Dépannage
+
+**Sur Colab, après une modification du code sur GitHub** : refaire **Exécution → Tout exécuter**. L'Étape 1 aligne la copie du Drive sur GitHub (la ligne `Version du code :` indique le commit utilisé) et recharge le code. Un redémarrage de session n'est nécessaire qu'après l'installation des dépendances, et le notebook le signale lui-même.
+
+**Quel modèle Gemini choisir avec une clé gratuite ?** Une question déclenche plusieurs appels (mots-clés, réponse, deux vérifications de cohérence, parfois une ou deux corrections). `gemini-3.5-flash-lite`, proposé par défaut, dispose de bien plus de requêtes gratuites par jour que `gemini-3.5-flash`. Les limites réelles de votre compte sont visibles dans Google AI Studio.
+
+**Messages d'erreur fréquents**
+
+| Message | Cause | Que faire |
+|---|---|---|
+| `Clé API … refusée` | Clé incomplète, avec un espace, ou révoquée | Recopier la clé depuis AI Studio (ou la console du fournisseur) |
+| `Quota journalier … atteint` | Limite quotidienne gratuite du modèle épuisée | Réessayer le lendemain ou passer à un modèle « flash-lite » |
+| `… limite le nombre de requêtes ou est surchargé` | Trop de requêtes par minute, malgré les nouvelles tentatives automatiques | Attendre une minute puis relancer |
+| `Modèle … introuvable` | Nom de modèle erroné | Vérifier le nom exact dans la documentation du fournisseur |
+| `Vector index mismatch for chunks_sha256` | Le dossier `database/` a changé depuis la création de l'index | Supprimer le dossier `vector_indexes` sur le Drive et relancer l'Étape 1 |
+| `La commande a échoué` pendant l'installation | Une dépendance ne s'installe pas | Lire les dernières lignes affichées juste au-dessus : elles donnent la cause |
+
+**Corrections apportées dans cette version**
+
+- Compatibilité Python 3.13 (Colab) : versions de `sentencepiece` et `tiktoken` mises à jour.
+- L'index préconstruit n'est plus refusé à cause d'un chemin de modèle écrit différemment (par exemple avec un `/` final).
+- Le code récupéré depuis GitHub est rechargé à chaque exécution de l'Étape 1, et la copie du Drive est alignée exactement sur la branche distante.
+- Les erreurs des commandes d'installation sont affichées dans Colab.
+- Appels API : nouvelles tentatives automatiques en cas de limite par minute ou de surcharge, messages clairs pour une clé refusée ou un quota épuisé, marge prévue pour la réflexion interne des modèles Gemini récents, paramètres adaptés aux modèles OpenAI et Claude actuels.
+- GPU T4 (Colab gratuit) : le modèle d'embedding et vLLM passent automatiquement en `float16`.
+- En mode API, le modèle d'embedding reste chargé entre deux questions.
+- Les modèles sont toujours libérés après une question, même en cas d'erreur.
+- Les citations indiquent aussi l'identifiant du livre, pour ne pas attribuer un passage au mauvais ouvrage quand deux livres ont les mêmes numéros de page.
