@@ -304,9 +304,9 @@ Le projet est open-source et conçu pour être forké, amélioré et adapté, ta
 
 Colab convient pour tester, mais le lien s'arrête avec la session. Pour une adresse fixe, protégée par mot de passe et accessible sans Colab ouvert, le dépôt fournit `modal_app.py` :
 
-- un GPU T4 fait tourner le modèle de recherche Qwen3-Embedding-4B, avec l'index préconstruit ;
+- le modèle de recherche Qwen3-Embedding-4B tourne sur processeur, sans GPU (Modal n'exige alors aucun moyen de paiement), avec l'index préconstruit ;
 - Gemini extrait les mots-clés et rédige la synthèse ;
-- l'application s'éteint après 10 minutes sans visite : l'offre gratuite Starter de Modal (30 $ de crédits par mois) couvre un usage régulier.
+- l'application s'éteint après 15 minutes sans visite ; au réveil, elle recharge son modèle (2 à 5 minutes) et un bandeau l'explique aux visiteurs : l'offre gratuite Starter de Modal (30 $ de crédits par mois) couvre un usage régulier.
 
 **Déploiement automatique (recommandé)** : le fichier `.github/workflows/deploy-modal.yml` publie l'application sur Modal à chaque `git push` sur la branche `main`. À préparer une seule fois :
 

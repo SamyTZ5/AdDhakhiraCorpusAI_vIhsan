@@ -685,6 +685,43 @@ def build_css() -> str:
   margin: 6px 0 4px;
 }}
 
+/* ---------- Bandeau de réveil du serveur ---------- */
+.ih-runtime-banner {{
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin: 12px 0 4px;
+  padding: 14px 16px;
+  background: #FBF3E4;
+  border: 1px solid var(--ih-gold);
+  border-left-width: 3px;
+  color: var(--ih-ink);
+  line-height: 1.55;
+}}
+.ih-runtime-error {{
+  border-color: var(--ih-bordeaux);
+  background: #FBF1F2;
+}}
+.ih-runtime-step {{
+  display: block;
+  margin-top: 4px;
+  font-size: .85rem;
+  color: var(--ih-muted);
+}}
+.ih-runtime-pulse {{
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin-top: 7px;
+  background: var(--ih-gold);
+  transform: rotate(45deg);
+  animation: ih-pulse 1.6s ease-in-out infinite;
+}}
+@keyframes ih-pulse {{
+  0%, 100% {{ opacity: .35; }}
+  50% {{ opacity: 1; }}
+}}
+
 /* ---------- Jauge d'avancement ---------- */
 .ih-progress {{
   margin: 14px 0 0;
