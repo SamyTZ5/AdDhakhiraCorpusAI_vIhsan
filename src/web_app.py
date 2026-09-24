@@ -1,4 +1,5 @@
 import argparse
+import hashlib
 import importlib
 import os
 import queue
@@ -14,45 +15,11 @@ from typing import Dict, List
 from src import config as base_config
 from src.reporting import write_output_with_timing
 from src import ihsan_theme as ihsan
+from src import engines
 from src import runtime_status
 from src import ui_content as ui
 
 
-ALL_BACKEND_CHOICES = [
-    ("Modèles locaux (vLLM)", "default"),
-    ("Gemini", "gemini_api"),
-    ("ChatGPT / OpenAI", "openai_api"),
-    ("Claude / Anthropic", "anthropic_api"),
-]
-
-# Sur un hébergement sans GPU (Hugging Face Spaces), seuls les moteurs en ligne
-# fonctionnent : ADDHAKHIRA_BACKENDS="gemini_api" limite la liste proposée.
-_enabled = [b.strip() for b in os.environ.get("ADDHAKHIRA_BACKENDS", "").split(",") if b.strip()]
-BACKEND_CHOICES = [c for c in ALL_BACKEND_CHOICES if not _enabled or c[1] in _enabled] or ALL_BACKEND_CHOICES
-
-API_KEY_BY_BACKEND = {
-    "gemini_api": "GEMINI_API_KEY",
-    "openai_api": "OPENAI_API_KEY",
-    "anthropic_api": "ANTHROPIC_API_KEY",
-}
-
-BACKEND_DISPLAY_NAMES = {
-    "default": "Ad-Dhakhira",
-    "gemini_api": "Gemini",
-    "openai_api": "ChatGPT",
-    "anthropic_api": "Claude",
-}
-
-# gemini-3.5-flash-lite : bien plus de requêtes par jour sur l'offre gratuite
-# que gemini-3.5-flash, ce qui compte car une question déclenche plusieurs appels.
-DEFAULT_API_MODELS = {
-    "gemini_api": os.environ.get("GEMINI_MODEL") or "gemini-3.5-flash-lite",
-    "openai_api": os.environ.get("OPENAI_MODEL") or "gpt-4.1",
-    "anthropic_api": os.environ.get("ANTHROPIC_MODEL") or "claude-sonnet-5",
-}
-
-# src.embeddings n'est volontairement pas rechargé : il garde le modèle
-# d'embedding en mémoire entre deux questions en mode API.
 PIPELINE_MODULE_PREFIXES = (
     "src.pipeline",
     "src.llm_ops",
@@ -278,13 +245,6 @@ INITIAL_LOCAL_MODEL_CONFIG = {
 }
 
 
-def _config_api_key_for_backend(backend: str) -> str:
-    key_name = API_KEY_BY_BACKEND.get(backend)
-    if not key_name:
-        return ""
-    return str(_config_value(key_name, "") or "").strip()
-
-
 def _output_dir() -> Path:
     directory = Path(_config_value("REPO_ROOT", Path.cwd())) / "outputs" / "web_app"
     directory.mkdir(parents=True, exist_ok=True)
@@ -296,43 +256,6 @@ def _allowed_paths() -> List[str]:
     gradio_tmp = Path(tempfile.gettempdir()) / "gradio"
     gradio_tmp.mkdir(parents=True, exist_ok=True)
     return [str(output_dir), str(gradio_tmp)]
-
-
-def _api_key_for_backend(backend: str, api_key: str) -> str:
-    key_name = API_KEY_BY_BACKEND.get(backend)
-    if not key_name:
-        return ""
-    return (
-        (api_key or "").strip()
-        or str(_config_value(key_name, "") or "").strip()
-        or os.environ.get(key_name, "").strip()
-    )
-
-
-def _runtime_config(
-    backend: str,
-    api_key: str,
-    dense_retrieval: bool,
-) -> Dict[str, object]:
-    cfg = {
-        "LLM_BACKEND": backend,
-        "ENABLE_DENSE_RETRIEVAL": bool(dense_retrieval),
-        "GEMINI_API_KEY": "",
-        "OPENAI_API_KEY": "",
-        "ANTHROPIC_API_KEY": "",
-        **INITIAL_LOCAL_MODEL_CONFIG,
-    }
-    if backend != "default":
-        model_name = DEFAULT_API_MODELS[backend]
-        key_name = API_KEY_BY_BACKEND[backend]
-        cfg.update(
-            {
-                key_name: _api_key_for_backend(backend, api_key),
-                "MODEL_EXTRACTOR_PATH": model_name,
-                "MODEL_REASONER_PATH": model_name,
-            }
-        )
-    return cfg
 
 
 def _apply_runtime_config(cfg: Dict[str, object]) -> None:
@@ -350,9 +273,9 @@ def _clear_pipeline_modules() -> None:
 
 def _run_question(
     backend: str,
-    api_key: str,
     dense_retrieval: bool,
     question: str,
+    user_settings=None,
 ):
     import gradio as gr
 
@@ -360,8 +283,16 @@ def _run_question(
     if not question:
         yield "Écrivez une question pour lancer la recherche.", "", gr.update(value=None, visible="hidden"), {"stage": "empty", "sources": []}
         return
-    if backend != "default" and not _api_key_for_backend(backend, api_key):
-        yield "La clé API est requise pour ce moteur.", "", gr.update(value=None, visible="hidden"), {"stage": "error", "sources": []}
+    if not backend:
+        yield (
+            "Aucun moteur disponible : ajoutez une clé API dans l'onglet Paramètres.",
+            "", gr.update(value=None, visible="hidden"), {"stage": "error", "sources": []},
+        )
+        return
+    try:
+        engine_cfg = engines.resolve(backend, user_settings)
+    except ValueError as exc:
+        yield str(exc), "", gr.update(value=None, visible="hidden"), {"stage": "error", "sources": []}
         return
 
     # Serveur en cours de réveil (Modal) : la question attend que le modèle soit
@@ -385,11 +316,11 @@ def _run_question(
         )
         time.sleep(4)
 
-    cfg = _runtime_config(
-        backend=backend,
-        api_key=api_key,
-        dense_retrieval=dense_retrieval,
-    )
+    cfg = {
+        "ENABLE_DENSE_RETRIEVAL": bool(dense_retrieval),
+        **INITIAL_LOCAL_MODEL_CONFIG,
+        **engine_cfg,
+    }
     events: "queue.Queue[Dict[str, object]]" = queue.Queue()
     result: Dict[str, object] = {}
 
@@ -429,7 +360,7 @@ def _run_question(
                     elapsed_seconds=elapsed,
                     output_path=str(output_path),
                 )
-                backend_display_name = BACKEND_DISPLAY_NAMES.get(backend, backend)
+                backend_display_name = engines.display_name(backend)
                 result["status"] = (
                     f"Terminé en {elapsed:.1f}s avec {backend_display_name}. "
                     "Synthèse prête au téléchargement."
@@ -519,34 +450,32 @@ def _run_question(
     )
 
 
-def _has_server_key(backend: str) -> bool:
-    key_name = API_KEY_BY_BACKEND.get(backend)
-    if not key_name:
-        return False
-    return bool(_config_api_key_for_backend(backend) or os.environ.get(key_name, "").strip())
+def _session_user(request) -> str:
+    """Nom de l'utilisateur connecté (version en ligne avec page de connexion)."""
+    try:
+        from http.cookies import SimpleCookie
 
+        from src.login_page import COOKIE_NAME, session_user
 
-def _needs_user_key(backend: str) -> bool:
-    return backend != "default" and not _has_server_key(backend)
-
-
-def _toggle_backend_fields(backend: str):
-    import gradio as gr
-
-    # La clé du serveur n'est jamais renvoyée au navigateur : si elle existe, le
-    # champ est masqué et le serveur l'utilise directement.
-    return gr.update(visible=_needs_user_key(backend), value="")
+        cookie = SimpleCookie()
+        cookie.load(request.headers.get("cookie", ""))
+        value = cookie[COOKIE_NAME].value if COOKIE_NAME in cookie else ""
+        return session_user(value) or ""
+    except Exception:
+        return ""
 
 
 def build_demo():
     import gradio as gr
 
-    initial_backend = str(_config_value("LLM_BACKEND", "default"))
-    if initial_backend not in {value for _, value in BACKEND_CHOICES}:
-        initial_backend = BACKEND_CHOICES[0][1]
+    initial_choices = engines.available_engines()
+    initial_backend = initial_choices[0][1] if initial_choices else None
+    browser_secret = hashlib.sha256(
+        ("addhakhira-browser:" + os.environ.get("APP_USERS", "") + os.environ.get("APP_PASSWORD", "")).encode()
+    ).hexdigest()
 
     notify_js = """
-(backend, apiKey, denseRetrieval, question) => {
+(backend, denseRetrieval, question, userSettings) => {
     const startText = "Votre question démarre maintenant";
     const doneText = "Synthèse prête au téléchargement";
     const startNotificationTitle = "Votre question démarre";
@@ -597,7 +526,7 @@ def build_demo():
         window.__addhakhiraDoneNotificationSent = false;
     }
 
-    return [backend, apiKey, denseRetrieval, question];
+    return [backend, denseRetrieval, question, userSettings];
 }
 """
 
@@ -618,7 +547,9 @@ def build_demo():
             yield progress, ihsan.report_iframe(report), download_update
 
     with gr.Blocks(title="Ad-Dhakhira") as demo:
+        user_settings = gr.BrowserState({}, storage_key="addhakhira_settings", secret=browser_secret)
         gr.HTML(ihsan.header_html())
+        account_bar = gr.HTML("", elem_id="ih-account")
         runtime_banner = gr.HTML(ui.runtime_banner_html(), elem_id="ih-runtime")
         runtime_timer = gr.Timer(4, active=not runtime_status.is_ready())
         with gr.Tabs(elem_id="ih-tabs"):
@@ -626,21 +557,15 @@ def build_demo():
                 gr.HTML(ihsan.section_html("I", "Le moteur", "Choisissez le modèle qui rédige la synthèse."))
                 with gr.Row():
                     backend = gr.Dropdown(
-                        choices=BACKEND_CHOICES,
+                        choices=initial_choices,
                         value=initial_backend,
                         label="Moteur de réponse",
+                        info="Seuls les moteurs utilisables ici sont proposés. Ajoutez vos propres clés dans l'onglet Paramètres.",
                     )
                     dense_retrieval = gr.Checkbox(
                         label="Recherche par le sens (recommandé)",
                         value=bool(_config_value("ENABLE_DENSE_RETRIEVAL", True)),
                     )
-                api_key = gr.Textbox(
-                    label="Clé API",
-                    type="password",
-                    value="",
-                    placeholder="Collez votre clé API",
-                    visible=_needs_user_key(initial_backend),
-                )
 
                 gr.HTML(ihsan.section_html("II", "Votre question", "En arabe ou en français."))
                 question = gr.Textbox(
@@ -667,6 +592,27 @@ def build_demo():
                     visible="hidden",
                     elem_id="ih-download",
                 )
+            with gr.Tab("Paramètres"):
+                gr.HTML(ui.settings_intro_html())
+                key_inputs = {}
+                model_inputs = {}
+                for engine_id, info in engines.API_ENGINES.items():
+                    with gr.Group():
+                        gr.HTML(f'<p class="ih-settings-title">{info["provider"]}</p>')
+                        key_inputs[engine_id] = gr.Textbox(
+                            label=f"Clé API {info['provider']}",
+                            type="password",
+                            placeholder=info["key_help"],
+                        )
+                        model_inputs[engine_id] = gr.Textbox(
+                            label="Modèle",
+                            placeholder=f"Par défaut : {engines.default_model(engine_id)}",
+                        )
+                with gr.Row():
+                    save_settings = gr.Button("Enregistrer dans ce navigateur", variant="primary", elem_id="ih-save-settings")
+                    clear_settings = gr.Button("Effacer mes clés", variant="secondary")
+                settings_message = gr.HTML("")
+                engines_status = gr.HTML(ui.engines_status_html({}))
             with gr.Tab("Guide"):
                 gr.HTML(ui.guide_html())
             with gr.Tab("Le corpus"):
@@ -692,10 +638,68 @@ def build_demo():
             show_progress="hidden",
         )
 
-        backend.change(
-            _toggle_backend_fields,
-            inputs=backend,
-            outputs=api_key,
+        engine_ids = list(engines.API_ENGINES)
+        field_components = [key_inputs[e] for e in engine_ids] + [model_inputs[e] for e in engine_ids]
+
+        def _engine_dropdown(settings, current=None):
+            choices = engines.available_engines(settings)
+            values = [c[1] for c in choices]
+            value = current if current in values else (values[0] if values else None)
+            return gr.update(choices=choices, value=value)
+
+        def _load_settings(settings, current, request: gr.Request):
+            settings = settings or {}
+            keys = [engines.user_entry(e, settings)["key"] for e in engine_ids]
+            models = [engines.user_entry(e, settings)["model"] for e in engine_ids]
+            return (
+                _engine_dropdown(settings, current),
+                ui.engines_status_html(settings),
+                ui.account_bar_html(_session_user(request)),
+                *keys,
+                *models,
+            )
+
+        def _save_settings(current, *values):
+            keys, models = values[: len(engine_ids)], values[len(engine_ids):]
+            settings = {
+                e: {"key": (k or "").strip(), "model": (m or "").strip()}
+                for e, k, m in zip(engine_ids, keys, models)
+                if (k or "").strip() or (m or "").strip()
+            }
+            return (
+                settings,
+                _engine_dropdown(settings, current),
+                ui.engines_status_html(settings),
+                ui.settings_saved_html(settings),
+            )
+
+        def _clear_settings(current):
+            return (
+                {},
+                _engine_dropdown({}, current),
+                ui.engines_status_html({}),
+                ui.settings_saved_html({}, cleared=True),
+                *([""] * len(field_components)),
+            )
+
+        demo.load(
+            _load_settings,
+            inputs=[user_settings, backend],
+            outputs=[backend, engines_status, account_bar, *field_components],
+            queue=False,
+            show_progress="hidden",
+        )
+        save_settings.click(
+            _save_settings,
+            inputs=[backend, *field_components],
+            outputs=[user_settings, backend, engines_status, settings_message],
+            queue=False,
+            show_progress="hidden",
+        )
+        clear_settings.click(
+            _clear_settings,
+            inputs=[backend],
+            outputs=[user_settings, backend, engines_status, settings_message, *field_components],
             queue=False,
             show_progress="hidden",
         )
@@ -703,9 +707,9 @@ def build_demo():
             run_styled,
             inputs=[
                 backend,
-                api_key,
                 dense_retrieval,
                 question,
+                user_settings,
             ],
             outputs=[status, answer, download],
             js=notify_js,
