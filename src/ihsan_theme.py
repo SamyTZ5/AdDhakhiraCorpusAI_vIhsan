@@ -722,7 +722,7 @@ def build_css() -> str:
   color: var(--ih-muted);
 }}
 
-/* ---------- Bandeau de réveil du serveur ---------- */
+/* ---------- Bandeau de démarrage de l'outil ---------- */
 .ih-runtime-banner {{
   display: flex;
   gap: 14px;

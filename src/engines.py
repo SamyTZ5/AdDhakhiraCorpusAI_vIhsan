@@ -102,24 +102,16 @@ def local_status(engine_id: str) -> Tuple[bool, str]:
     return True, "Disponible."
 
 
-def _enabled_by_host(engine_id: str) -> bool:
-    # ADDHAKHIRA_BACKENDS (facultatif) permet à l'hébergeur de restreindre la liste.
-    allowed = [b.strip() for b in os.environ.get("ADDHAKHIRA_BACKENDS", "").split(",") if b.strip()]
-    return not allowed or engine_id in allowed
-
-
 def available_engines(settings: Optional[Dict] = None) -> List[Tuple[str, str]]:
     """Choix (libellé, identifiant) à afficher dans la liste des moteurs."""
     choices = []
     for engine_id in ENGINE_ORDER:
         if engine_id in API_ENGINES:
-            if not _enabled_by_host(engine_id) and not user_entry(engine_id, settings)["key"]:
-                continue
             if user_entry(engine_id, settings)["key"]:
                 choices.append((f"{API_ENGINES[engine_id]['label']} · votre clé", engine_id))
-            elif server_key(engine_id) and _enabled_by_host(engine_id):
+            elif server_key(engine_id):
                 choices.append((API_ENGINES[engine_id]["label"], engine_id))
-        elif _enabled_by_host(engine_id) and local_status(engine_id)[0]:
+        elif local_status(engine_id)[0]:
             choices.append((LOCAL_ENGINES[engine_id]["label"], engine_id))
     return choices
 
@@ -130,7 +122,7 @@ def resolve(engine_id: str, settings: Optional[Dict] = None) -> Dict[str, object
     if engine_id in API_ENGINES:
         info = API_ENGINES[engine_id]
         entry = user_entry(engine_id, settings)
-        key = entry["key"] or (server_key(engine_id) if _enabled_by_host(engine_id) else "")
+        key = entry["key"] or server_key(engine_id)
         if not key:
             raise ValueError(
                 f"Aucune clé {info['provider']} disponible. Ajoutez la vôtre dans l'onglet Paramètres."

@@ -295,7 +295,7 @@ def _run_question(
         yield str(exc), "", gr.update(value=None, visible="hidden"), {"stage": "error", "sources": []}
         return
 
-    # Serveur en cours de réveil (Modal) : la question attend que le modèle soit
+    # Outil en cours de démarrage : la question attend que le modèle soit
     # chargé, avec une explication, plutôt que d'échouer.
     while not runtime_status.is_ready():
         state = runtime_status.get()
@@ -308,7 +308,7 @@ def _run_question(
             )
             return
         yield (
-            "Le serveur se réveille et recharge son modèle de recherche. Votre question démarrera "
+            "L'outil termine son démarrage (corpus et modèle de recherche). Votre question démarrera "
             f"automatiquement dès que ce sera prêt. ({state['message']})",
             "",
             gr.update(value=None, visible="hidden"),

@@ -1,4 +1,4 @@
-"""Construction du serveur web d'Ad-Dhakhira, commune à Modal et Kaggle.
+"""Construction du serveur web d'Ad-Dhakhira pour une session partagée (Kaggle).
 
 build_app() assemble :
   - l'interface Gradio (src/web_app.py) ;
