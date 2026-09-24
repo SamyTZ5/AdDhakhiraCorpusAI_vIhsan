@@ -9,10 +9,16 @@ partir des fichiers de database/.
 import html as _html
 import json
 import math
+import os
+import time
 from pathlib import Path
 from typing import Dict, List, Optional
 
 CATALOG_PATH = Path(__file__).with_name("corpus_catalog.json")
+
+# « modal_cpu » : hébergement Modal sans carte graphique, qui s'éteint entre
+# deux visites. Sinon (Colab, poste local) : valeur par défaut « colab ».
+HOSTING = os.environ.get("ADDHAKHIRA_HOSTING", "colab")
 
 
 def _e(value) -> str:
@@ -132,10 +138,17 @@ def progress_html(
 
     hint = ""
     if state == "running" and step <= 2 and elapsed > 25:
-        hint = (
-            '<p class="ih-progress-hint">La première question est la plus longue : le modèle de recherche '
-            "se charge depuis Google Drive. Les suivantes iront bien plus vite.</p>"
-        )
+        if HOSTING == "modal_cpu":
+            hint = (
+                '<p class="ih-progress-hint">Le serveur fonctionne sans carte graphique pour rester gratuit : '
+                "après une pause, il doit d'abord recharger le modèle de recherche, ce qui prend quelques "
+                "minutes. Les questions suivantes iront bien plus vite.</p>"
+            )
+        else:
+            hint = (
+                '<p class="ih-progress-hint">La première question est la plus longue : le modèle de recherche '
+                "se charge depuis Google Drive. Les suivantes iront bien plus vite.</p>"
+            )
 
     label = {
         "done": f"100 % · {_fmt_duration(elapsed)}",
@@ -187,8 +200,49 @@ class ProgressTracker:
         return html
 
 
+def runtime_banner_html(status: Optional[Dict] = None) -> str:
+    """Bandeau affiché pendant le réveil du serveur ; vide quand tout est prêt."""
+    if status is None:
+        from src import runtime_status
+
+        status = runtime_status.get()
+    state = status.get("state")
+    if state == "ready":
+        return ""
+    waited = _fmt_duration(time.time() - float(status.get("since") or time.time()))
+    if state == "error":
+        return (
+            '<div class="ih-runtime-banner ih-runtime-error" role="alert"><strong>L\'outil n\'a pas pu démarrer.</strong> '
+            f"{_e(status.get('message'))} Rechargez la page dans une minute ; si le problème persiste, "
+            "prévenez la personne qui vous a partagé l'outil.</div>"
+        )
+    return (
+        '<div class="ih-runtime-banner" role="status"><span class="ih-runtime-pulse" aria-hidden="true"></span>'
+        "<div><strong>L'outil se réveille.</strong> Il s'éteint quand personne ne l'utilise, pour rester "
+        "gratuit ; au réveil, il recharge son modèle de recherche (2 à 5 minutes). Vous pouvez déjà écrire "
+        "votre question : elle démarrera dès que tout sera prêt."
+        f'<span class="ih-runtime-step">{_e(status.get("message"))} · depuis {waited}</span></div></div>'
+    )
+
+
 def idle_progress_html() -> str:
     return progress_html("startup", "Choisissez un moteur, écrivez votre question, puis lancez la recherche.", state="idle")
+
+
+def _hosting_paragraph() -> str:
+    if HOSTING == "modal_cpu":
+        return (
+            "<p>Pour rester gratuit, l'outil tourne sur un serveur <strong>sans carte graphique</strong>, qui "
+            "<strong>s'éteint après 15 minutes sans visite</strong>. Au réveil, il doit recharger en mémoire son "
+            "modèle de recherche (environ 16 Go) : comptez <strong>2 à 5 minutes</strong> avant la première "
+            "réponse. Un bandeau l'indique en haut de la page. Ensuite, tant que l'outil sert régulièrement, "
+            "il reste éveillé et les questions s'enchaînent sans ce délai. Une seule question est traitée à "
+            "la fois : si quelqu'un d'autre fait une recherche, la vôtre attend son tour.</p>"
+        )
+    return (
+        "<p>La première question de la session est la plus longue : le modèle de recherche se charge "
+        "d'abord en mémoire. Les suivantes vont plus vite.</p>"
+    )
 
 
 # --------------------------------------------------------------------------
@@ -241,9 +295,15 @@ def guide_html() -> str:
     toujours la page citée dans l'onglet « Pages consultées », et idéalement dans l'édition imprimée.</li>
   </ul>
 
-  <h3>Durée et confidentialité</h3>
-  <p>Une recherche prend en général de une à quelques minutes ; la première de la session est la plus longue.
-  Avec un moteur en ligne (Gemini, ChatGPT, Claude), la question et les extraits sont envoyés à ce fournisseur.
+  <h3>Pourquoi c'est parfois long ?</h3>
+  <p>Une recherche prend en général <strong>une à trois minutes</strong>. Ce temps n'est pas perdu : l'assistant
+  interroge {books} livres, lit les pages retenues, rédige, puis fait relire sa réponse par deux vérificateurs,
+  et la corrige si besoin. Cela représente 5 à 10 échanges avec le modèle de langage.</p>
+  {_hosting_paragraph()}
+
+  <h3>Confidentialité</h3>
+  <p>
+Avec un moteur en ligne (Gemini, ChatGPT, Claude), la question et les extraits sont envoyés à ce fournisseur.
   Avec une clé Gemini gratuite, Google peut utiliser ces échanges pour améliorer ses modèles : n'écrivez pas
   d'informations personnelles dans vos questions.</p>
 </article>
@@ -314,6 +374,15 @@ def technical_html(project_url: str) -> str:
   <p>Une recherche hybride est disponible (<code>ENABLE_HYBRID_RETRIEVAL</code>) : 0,6 × score lexical + 0,4 ×
   score dense, où le lexical combine BM25 (0,65), la fréquence des mots-clés (0,20) et les titres de section
   (0,15). Elle est désactivée par défaut.</p>
+
+  <h3>Hébergement</h3>
+  <p>Version en ligne : conteneur <a href="https://modal.com" target="_blank" rel="noopener">Modal</a> sans GPU
+  (4 processeurs, 24 Go de mémoire), avec l'embedding en float32. Le modèle et l'index sont conservés dans un
+  Volume Modal ; le conteneur s'éteint après 15 minutes d'inactivité et redémarre à la visite suivante. Au
+  démarrage, l'interface est servie immédiatement et le préchargement (corpus, modèle de recherche) se fait en
+  arrière-plan ; un verrou garantit qu'il n'a lieu qu'une fois, même si une question arrive pendant ce temps.
+  Déploiement automatique par GitHub Actions à chaque fusion dans <code>main</code>. Version de test :
+  notebook Colab (GPU T4).</p>
 
   <h3>Robustesse</h3>
   <ul>

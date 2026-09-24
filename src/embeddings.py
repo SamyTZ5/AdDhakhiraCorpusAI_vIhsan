@@ -197,17 +197,21 @@ class EmbeddingModel:
 
 # Modèles d'embedding gardés en mémoire entre deux questions (mode API).
 _SHARED_MODELS = {}
+_SHARED_LOCK = __import__("threading").Lock()
 
 
 def load_shared_embedding_model(model_name: str) -> "EmbeddingModel":
-    model = _SHARED_MODELS.get(model_name)
-    if model is None:
-        model = EmbeddingModel(model_name)
-        _SHARED_MODELS[model_name] = model
-    return model
+    # Le verrou évite de charger deux fois un modèle de plusieurs Go en même temps.
+    with _SHARED_LOCK:
+        model = _SHARED_MODELS.get(model_name)
+        if model is None:
+            model = EmbeddingModel(model_name)
+            _SHARED_MODELS[model_name] = model
+        return model
 
 
 def release_shared_embedding_models() -> None:
-    while _SHARED_MODELS:
-        _, model = _SHARED_MODELS.popitem()
-        model.close()
+    with _SHARED_LOCK:
+        while _SHARED_MODELS:
+            _, model = _SHARED_MODELS.popitem()
+            model.close()

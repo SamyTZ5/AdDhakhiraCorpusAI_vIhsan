@@ -1,5 +1,6 @@
 import json
 import os
+import threading
 from typing import Dict, List, Optional, Tuple
 
 from src.models import PageDoc, TextChunk
@@ -39,6 +40,7 @@ def _resolve_json_files(json_input_path: str) -> List[str]:
 # 35 s sur un petit processeur. On le garde en mémoire tant que les fichiers
 # du dossier ne changent pas.
 _CORPUS_CACHE: Dict[tuple, Tuple[List[TextChunk], Dict[str, PageDoc]]] = {}
+_CORPUS_LOCK = threading.Lock()
 
 
 def _corpus_cache_key(json_files: List[str]) -> tuple:
@@ -52,13 +54,16 @@ def load_chunks(json_input_path: str) -> Tuple[List[TextChunk], Dict[str, PageDo
     if not json_files:
         raise ValueError(f"No JSON files found in: {json_input_path}")
     cache_key = _corpus_cache_key(json_files)
-    cached = _CORPUS_CACHE.get(cache_key)
-    if cached is not None:
-        return cached
-    result = _load_chunks_uncached(json_files)
-    _CORPUS_CACHE.clear()
-    _CORPUS_CACHE[cache_key] = result
-    return result
+    # Le verrou évite de préparer le corpus deux fois en parallèle (démarrage
+    # en arrière-plan et première question simultanés).
+    with _CORPUS_LOCK:
+        cached = _CORPUS_CACHE.get(cache_key)
+        if cached is not None:
+            return cached
+        result = _load_chunks_uncached(json_files)
+        _CORPUS_CACHE.clear()
+        _CORPUS_CACHE[cache_key] = result
+        return result
 
 
 def _load_chunks_uncached(json_files: List[str]) -> Tuple[List[TextChunk], Dict[str, PageDoc]]:

@@ -1,10 +1,12 @@
 """Déploiement d'Ad-Dhakhira sur Modal (https://modal.com).
 
-Architecture :
-  - un GPU T4 fait tourner le modèle de recherche Qwen3-Embedding-4B ;
+Architecture (sans GPU, donc sans moyen de paiement requis par Modal) :
+  - le modèle de recherche Qwen3-Embedding-4B tourne sur processeur (float32) ;
   - Gemini (API) extrait les mots-clés et rédige la synthèse ;
   - le modèle et l'index sont gardés dans un Volume Modal, téléchargés une seule fois ;
-  - l'application s'éteint après 10 minutes sans visite et ne coûte alors rien.
+  - l'application s'éteint après 15 minutes sans visite et ne coûte alors rien ;
+  - au réveil, la page s'affiche tout de suite et le modèle se recharge en
+    arrière-plan ; un bandeau explique l'attente aux visiteurs.
 
 Prérequis : un secret Modal nommé « addhakhira » contenant GEMINI_API_KEY et
 APP_PASSWORD. Le plus simple est de passer par l'Étape 4 du notebook Colab,
@@ -96,27 +98,59 @@ VECTOR_INDEX_BACKEND = "faiss"
     (CODE_DIR / "src" / "config.py").write_text(template + overrides, encoding="utf-8")
 
 
-def create_web_app(commit_volume=None):
-    """Construit l'application web (FastAPI + Gradio), prête à servir."""
+def _preload(commit_volume=None) -> None:
+    """Prépare tout en arrière-plan ; l'interface lit l'avancement dans runtime_status."""
+    from src import runtime_status
+
+    try:
+        runtime_status.set_state("loading", "Vérification du modèle et de l'index")
+        if ensure_assets() and commit_volume is not None:
+            commit_volume()
+
+        from src import config
+        from src.data_loader import load_chunks
+        from src.embeddings import load_shared_embedding_model
+
+        runtime_status.set_state("loading", "Préparation des 18 livres")
+        log("Chargement du corpus…")
+        load_chunks(str(config.JSON_INPUT_PATH))
+        runtime_status.set_state("loading", "Chargement du modèle de recherche (environ 16 Go)")
+        log("Chargement du modèle de recherche…")
+        load_shared_embedding_model(config.EMBEDDING_MODEL)
+        runtime_status.set_state("ready")
+        log("Outil prêt.")
+    except Exception as exc:  # l'erreur est affichée aux visiteurs par le bandeau
+        import traceback
+
+        traceback.print_exc()
+        runtime_status.set_state("error", str(exc))
+
+
+def create_web_app(commit_volume=None, background: bool = True):
+    """Construit l'application web (FastAPI + Gradio).
+
+    La page est servie immédiatement ; le corpus et le modèle se chargent en
+    arrière-plan (background=True) pour que les visiteurs voient tout de suite
+    un bandeau explicatif plutôt qu'une page blanche.
+    """
+    import threading
+
     os.environ.setdefault("ADDHAKHIRA_BACKENDS", "gemini_api")
     os.environ.setdefault("GEMINI_MODEL", GEMINI_MODEL)
+    os.environ.setdefault("ADDHAKHIRA_HOSTING", "modal_cpu")
     if not os.environ.get("GEMINI_API_KEY"):
         log("ATTENTION : GEMINI_API_KEY absente du secret, chaque visiteur devra saisir sa clé.")
 
     _use_code_dir()
     write_config()
-    if ensure_assets() and commit_volume is not None:
-        commit_volume()
 
-    # Préchargement : la première question n'attend ni le corpus ni le modèle.
-    from src import config
-    from src.data_loader import load_chunks
-    from src.embeddings import load_shared_embedding_model
+    from src import runtime_status
 
-    log("Chargement du corpus…")
-    load_chunks(str(config.JSON_INPUT_PATH))
-    log("Chargement du modèle de recherche…")
-    load_shared_embedding_model(config.EMBEDDING_MODEL)
+    runtime_status.set_state("loading", "Démarrage")
+    if background:
+        threading.Thread(target=_preload, args=(commit_volume,), daemon=True).start()
+    else:
+        _preload(commit_volume)
 
     import gradio as gr
     from fastapi import FastAPI
@@ -126,7 +160,7 @@ def create_web_app(commit_volume=None):
     demo = web_app.build_demo()
     demo.queue(default_concurrency_limit=1)
     password = os.environ.get("APP_PASSWORD", "").strip()
-    log("Application prête.")
+    log("Interface servie (préchargement en cours).")
     return gr.mount_gradio_app(
         FastAPI(),
         demo,
@@ -166,6 +200,7 @@ if modal is not None:
         .env(
             {
                 "ADDHAKHIRA_BACKENDS": "gemini_api",
+                "ADDHAKHIRA_HOSTING": "modal_cpu",
                 "HF_HOME": str(DATA_DIR / "hf_cache"),
                 "TOKENIZERS_PARALLELISM": "false",
             }
@@ -185,12 +220,12 @@ if modal is not None:
 
     @app.function(
         image=image,
-        gpu="T4",
-        memory=8192,
+        cpu=4.0,                   # pas de GPU : aucun moyen de paiement requis
+        memory=24576,              # modèle 4B en float32 (~16 Go) + index + corpus
         volumes={str(DATA_DIR): volume},
         secrets=[modal.Secret.from_name(SECRET_NAME)],
         timeout=60 * 60,
-        scaledown_window=10 * 60,  # s'éteint après 10 min sans visite
+        scaledown_window=15 * 60,  # s'éteint après 15 min sans visite
         max_containers=1,          # une seule instance : file d'attente partagée
     )
     @modal.concurrent(max_inputs=100)

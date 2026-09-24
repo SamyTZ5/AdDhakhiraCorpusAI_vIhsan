@@ -14,6 +14,7 @@ from typing import Dict, List
 from src import config as base_config
 from src.reporting import write_output_with_timing
 from src import ihsan_theme as ihsan
+from src import runtime_status
 from src import ui_content as ui
 
 
@@ -363,6 +364,27 @@ def _run_question(
         yield "La clé API est requise pour ce moteur.", "", gr.update(value=None, visible="hidden"), {"stage": "error", "sources": []}
         return
 
+    # Serveur en cours de réveil (Modal) : la question attend que le modèle soit
+    # chargé, avec une explication, plutôt que d'échouer.
+    while not runtime_status.is_ready():
+        state = runtime_status.get()
+        if state["state"] == "error":
+            yield (
+                f"L'outil n'a pas pu démarrer : {state['message']}",
+                "",
+                gr.update(value=None, visible="hidden"),
+                {"stage": "error", "sources": []},
+            )
+            return
+        yield (
+            "Le serveur se réveille et recharge son modèle de recherche. Votre question démarrera "
+            f"automatiquement dès que ce sera prêt. ({state['message']})",
+            "",
+            gr.update(value=None, visible="hidden"),
+            {"stage": "startup", "sources": []},
+        )
+        time.sleep(4)
+
     cfg = _runtime_config(
         backend=backend,
         api_key=api_key,
@@ -597,6 +619,8 @@ def build_demo():
 
     with gr.Blocks(title="Ad-Dhakhira") as demo:
         gr.HTML(ihsan.header_html())
+        runtime_banner = gr.HTML(ui.runtime_banner_html(), elem_id="ih-runtime")
+        runtime_timer = gr.Timer(4, active=not runtime_status.is_ready())
         with gr.Tabs(elem_id="ih-tabs"):
             with gr.Tab("Rechercher"):
                 gr.HTML(ihsan.section_html("I", "Le moteur", "Choisissez le modèle qui rédige la synthèse."))
@@ -650,6 +674,23 @@ def build_demo():
             with gr.Tab("Sous le capot"):
                 gr.HTML(ui.technical_html(ihsan.PROJECT_URL))
         gr.HTML(ihsan.footer_html())
+
+        def _refresh_runtime_banner():
+            ready = runtime_status.is_ready()
+            return ui.runtime_banner_html(), gr.Timer(active=not ready)
+
+        runtime_timer.tick(
+            _refresh_runtime_banner,
+            outputs=[runtime_banner, runtime_timer],
+            queue=False,
+            show_progress="hidden",
+        )
+        demo.load(
+            _refresh_runtime_banner,
+            outputs=[runtime_banner, runtime_timer],
+            queue=False,
+            show_progress="hidden",
+        )
 
         backend.change(
             _toggle_backend_fields,
